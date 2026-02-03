@@ -16,7 +16,7 @@ M.setup = function(args)
   M.config = vim.tbl_deep_extend("force", M.config, args or {})
 end
 
-local ALLOWED_CHARACTERS = "A-Za-z%-%(%).'’"
+local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
 
 ---@type {buf: integer?, win: integer?, timer: integer?}
 local state = {}
@@ -59,7 +59,7 @@ end
 
 --- Executes rsvp display for given list of words
 ---@param words string[] list of words to display
-local execute_words = function(words)
+local function execute_words(words)
   stop_timer()
 
   local i = 1

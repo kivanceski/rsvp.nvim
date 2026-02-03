@@ -6,7 +6,7 @@ M.close_win = function(win_id)
   vim.api.nvim_win_close(win_id, true)
 end
 
---- @type vim.api.keyset.win_config
+---@type vim.api.keyset.win_config
 local floating_window_config = {
   width = vim.o.columns,
   height = vim.o.lines,
