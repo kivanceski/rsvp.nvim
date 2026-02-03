@@ -1,7 +1,12 @@
 local window = require("window")
 
 ---@class Config
-local config = {}
+---@field auto_run boolean
+---@field initial_wpm integer
+local config = {
+  auto_run = true,
+  initial_wpm = 300,
+}
 
 ---@class MyModule
 local M = {}
@@ -18,78 +23,75 @@ end
 
 local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
 
----@type {buf: integer?, win: integer?, timer: integer?}
-local state = {}
+---@class State
+---@field buf integer
+---@field win integer
+---@field timer integer
+---@field words string[]
+---@field current_index integer
+local initial_state = {
+  current_index = 1,
+}
 
-local function center_text(content)
-  -- center horizontally
-  local pad = math.max(0, math.floor((vim.o.columns - #content) / 2))
-  local line_centered = string.rep(" ", pad) .. content
-
-  -- center vertically
-  local win_height = vim.api.nvim_win_get_height(0)
-  local top_pad = math.floor((win_height - 1) / 2)
-  local padded = {}
-  for _ = 1, top_pad do
-    table.insert(padded, "")
-  end
-  table.insert(padded, line_centered)
-
-  return padded
-end
+---@type State
+local state = vim.deepcopy(initial_state)
 
 local function stop_timer()
   if state.timer then
-    pcall(vim.fn.timer_stop, state.timer)
+    vim.fn.timer_stop(state.timer)
     state.timer = nil
   end
 end
 
-local function attach_cleanup()
-  vim.api.nvim_create_autocmd({ "BufWipeout", "BufUnload" }, {
-    buffer = state.buf,
-    once = true,
-    callback = function()
-      stop_timer()
-      state.buf = nil
-      state.win = nil
-    end,
-  })
+local function init_empty_buffer()
+  local empty_lines = {}
+
+  for _ = 1, vim.o.lines do
+    table.insert(empty_lines, "")
+  end
+
+  vim.api.nvim_buf_set_lines(state.buf or 0, 0, -1, false, empty_lines)
 end
 
---- Executes rsvp display for given list of words
----@param words string[] list of words to display
-local function execute_words(words)
-  stop_timer()
+M.play = function()
+  local line_number = math.floor(vim.o.lines / 2)
+  local win_width = vim.api.nvim_win_get_width(0)
 
-  local i = 1
-  state.timer = vim.fn.timer_start(200, function(timer)
+  local time = math.floor(60000 / config.initial_wpm)
+  state.timer = vim.fn.timer_start(time, function(timer)
     if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
       vim.fn.timer_stop(timer)
       return
     end
 
-    if i > #words then
+    if state.current_index > #state.words then
       vim.fn.timer_stop(timer)
       state.timer = nil
       return
     end
 
-    vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, center_text(words[i]))
-    i = i + 1
+    local word = state.words[state.current_index]
+    local word_w = vim.fn.strdisplaywidth(word)
+    local start_col = math.max(0, math.floor((win_width - word_w) / 2))
+
+    local line = string.rep(" ", start_col) .. word
+    vim.api.nvim_buf_set_lines(state.buf, line_number, line_number + 1, false, { line })
+    state.current_index = state.current_index + 1
   end, { ["repeat"] = -1 })
 end
 
--- cleanup on buffer close
-vim.api.nvim_create_autocmd({ "BufWipeout", "BufUnload" }, {
-  buffer = state.buf,
-  once = true,
-  callback = function()
-    if state.timer then
-      vim.fn.timer_stop(state.timer)
-    end
-  end,
-})
+M.pause = function()
+  vim.fn.timer_stop(state.timer)
+end
+
+local function start_session()
+  stop_timer()
+  init_empty_buffer()
+
+  if config.auto_run then
+    M.play()
+  end
+end
 
 ---@param opts vim.api.keyset.create_user_command.command_args
 M.rsvp = function(opts)
@@ -106,9 +108,22 @@ M.rsvp = function(opts)
     end
   end
 
-  state = window.create_floating_window()
-  attach_cleanup()
-  execute_words(words)
+  local win_state = window.create_floating_window()
+  state = vim.tbl_deep_extend("force", vim.deepcopy(initial_state), win_state)
+  state.words = words
+
+  -- attach cleanup
+  vim.api.nvim_create_autocmd({ "BufWipeout", "BufUnload" }, {
+    buffer = state.buf,
+    once = true,
+    callback = function()
+      stop_timer()
+      state.buf = nil
+      state.win = nil
+    end,
+  })
+
+  start_session()
 end
 
 return M
