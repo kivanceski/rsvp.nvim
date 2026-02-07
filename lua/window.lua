@@ -20,7 +20,7 @@ M.create_floating_window = function()
   local buf = vim.api.nvim_create_buf(false, true)
   local win = vim.api.nvim_open_win(buf, true, floating_window_config)
 
-  -- vim.bo[buf].modifiable = false
+  vim.bo[buf].modifiable = false
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].bufhidden = "wipe"
 

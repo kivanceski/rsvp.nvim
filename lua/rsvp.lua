@@ -50,7 +50,9 @@ local function init_empty_buffer()
     table.insert(empty_lines, "")
   end
 
+  vim.bo[state.buf].modifiable = true
   vim.api.nvim_buf_set_lines(state.buf or 0, 0, -1, false, empty_lines)
+  vim.bo[state.buf].modifiable = false
 end
 
 M.play = function()
@@ -71,11 +73,15 @@ M.play = function()
     end
 
     local word = state.words[state.current_index]
-    local word_w = vim.fn.strdisplaywidth(word)
-    local start_col = math.max(0, math.floor((win_width - word_w) / 2))
+    local word_width = vim.fn.strdisplaywidth(word)
+    local start_col = math.max(0, math.floor((win_width - word_width) / 2))
 
     local line = string.rep(" ", start_col) .. word
+
+    vim.bo[state.buf].modifiable = true
     vim.api.nvim_buf_set_lines(state.buf, line_number, line_number + 1, false, { line })
+    vim.bo[state.buf].modifiable = false
+
     state.current_index = state.current_index + 1
   end, { ["repeat"] = -1 })
 end
