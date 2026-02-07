@@ -147,6 +147,16 @@ local function init_window()
     once = true,
     callback = close_rsvp,
   })
+
+  vim.api.nvim_create_autocmd("CmdlineEnter", {
+    buffer = state.buf,
+    callback = M.pause,
+  })
+
+  vim.api.nvim_create_autocmd("CmdlineLeave", {
+    buffer = state.buf,
+    callback = M.play,
+  })
 end
 
 M.refresh = function()
