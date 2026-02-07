@@ -1,4 +1,5 @@
 local window = require("window")
+local utils = require("utils")
 
 ---@class Config
 ---@field auto_run boolean
@@ -50,9 +51,9 @@ local function init_empty_buffer()
     table.insert(empty_lines, "")
   end
 
-  vim.bo[state.buf].modifiable = true
-  vim.api.nvim_buf_set_lines(state.buf or 0, 0, -1, false, empty_lines)
-  vim.bo[state.buf].modifiable = false
+  utils.with_buffer_mutation(state.buf, function()
+    vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, empty_lines)
+  end)
 end
 
 M.play = function()
@@ -78,16 +79,16 @@ M.play = function()
 
     local line = string.rep(" ", start_col) .. word
 
-    vim.bo[state.buf].modifiable = true
-    vim.api.nvim_buf_set_lines(state.buf, line_number, line_number + 1, false, { line })
-    vim.bo[state.buf].modifiable = false
+    utils.with_buffer_mutation(state.buf, function()
+      vim.api.nvim_buf_set_lines(state.buf, line_number, line_number + 1, false, { line })
+    end)
 
     state.current_index = state.current_index + 1
   end, { ["repeat"] = -1 })
 end
 
 M.pause = function()
-  vim.fn.timer_stop(state.timer)
+  stop_timer()
 end
 
 local function start_session()

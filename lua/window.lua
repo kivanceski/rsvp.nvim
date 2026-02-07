@@ -23,7 +23,9 @@ M.create_floating_window = function()
   vim.bo[buf].modifiable = false
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].readonly = true
 
+  -- attach keymaps
   vim.keymap.set("n", "q", M.close_win, { buffer = buf, nowait = true, silent = true })
   vim.keymap.set("n", "<Esc>", M.close_win, { buffer = buf, nowait = true, silent = true })
 
