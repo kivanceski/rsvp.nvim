@@ -116,6 +116,7 @@ M.rsvp = function(opts)
   end
 
   local win_state = window.create_floating_window()
+
   state = vim.tbl_deep_extend("force", vim.deepcopy(initial_state), win_state)
   state.words = words
 
@@ -125,8 +126,7 @@ M.rsvp = function(opts)
     once = true,
     callback = function()
       stop_timer()
-      state.buf = nil
-      state.win = nil
+      state = vim.deepcopy(initial_state)
     end,
   })
 
