@@ -1,4 +1,3 @@
-local window = require("window")
 local utils = require("utils")
 
 ---@class Config
@@ -56,6 +55,12 @@ local function init_empty_buffer()
   end)
 end
 
+local function close_rsvp()
+  pcall(vim.api.nvim_win_close, state.win, true)
+  stop_timer()
+  state = vim.tbl_deep_extend("force", state, initial_state)
+end
+
 M.play = function()
   local line_number = math.floor(vim.o.lines / 2)
   local win_width = vim.api.nvim_win_get_width(0)
@@ -100,6 +105,56 @@ local function start_session()
   end
 end
 
+-- WINDOW LOGIC
+
+---@type vim.api.keyset.win_config
+local floating_window_config = {
+  width = vim.o.columns,
+  height = vim.o.lines,
+  relative = "editor",
+  col = 0,
+  row = 0,
+  style = "minimal",
+}
+
+local function create_floating_window()
+  local buf = vim.api.nvim_create_buf(false, true)
+  local win = vim.api.nvim_open_win(buf, true, floating_window_config)
+
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].readonly = true
+
+  -- attach keymaps
+  vim.keymap.set("n", "q", close_rsvp, { buffer = buf, nowait = true, silent = true })
+  vim.keymap.set("n", "<Esc>", close_rsvp, { buffer = buf, nowait = true, silent = true })
+
+  return { buf = buf, win = win }
+end
+
+local function init_window()
+  if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+    return
+  end
+
+  local win_state = create_floating_window()
+  state = vim.tbl_deep_extend("force", state, win_state)
+
+  -- attach cleanup
+  vim.api.nvim_create_autocmd({ "BufWipeout", "BufUnload" }, {
+    buffer = state.buf,
+    once = true,
+    callback = close_rsvp,
+  })
+end
+
+M.refresh = function()
+  close_rsvp()
+  init_window()
+  start_session()
+end
+
 ---@param opts vim.api.keyset.create_user_command.command_args
 M.rsvp = function(opts)
   local start = opts.line1
@@ -115,21 +170,9 @@ M.rsvp = function(opts)
     end
   end
 
-  local win_state = window.create_floating_window()
-
-  state = vim.tbl_deep_extend("force", vim.deepcopy(initial_state), win_state)
   state.words = words
 
-  -- attach cleanup
-  vim.api.nvim_create_autocmd({ "BufWipeout", "BufUnload" }, {
-    buffer = state.buf,
-    once = true,
-    callback = function()
-      stop_timer()
-      state = vim.deepcopy(initial_state)
-    end,
-  })
-
+  init_window()
   start_session()
 end
 
