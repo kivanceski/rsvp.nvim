@@ -22,6 +22,7 @@ M.setup = function(args)
 end
 
 local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
+local INTERVAL = math.floor(60000 / config.initial_wpm)
 
 ---@class State
 ---@field buf integer
@@ -36,7 +37,7 @@ local initial_state = {
 ---@type State
 local state = vim.deepcopy(initial_state)
 
-local function stop_timer()
+local function clear_timer()
   if state.timer then
     vim.fn.timer_stop(state.timer)
     state.timer = nil
@@ -57,16 +58,26 @@ end
 
 local function close_rsvp()
   pcall(vim.api.nvim_win_close, state.win, true)
-  stop_timer()
+  clear_timer()
   state = vim.tbl_deep_extend("force", state, initial_state)
 end
 
-M.play = function()
+---@param word string
+local function write_word(word)
   local line_number = math.floor(vim.o.lines / 2)
   local win_width = vim.api.nvim_win_get_width(0)
+  local word_width = vim.fn.strdisplaywidth(word)
+  local start_col = math.max(0, math.floor((win_width - word_width) / 2))
 
-  local time = math.floor(60000 / config.initial_wpm)
-  state.timer = vim.fn.timer_start(time, function(timer)
+  local line = string.rep(" ", start_col) .. word
+
+  utils.with_buffer_mutation(state.buf, function()
+    vim.api.nvim_buf_set_lines(state.buf, line_number, line_number + 1, false, { line })
+  end)
+end
+
+M.play = function()
+  state.timer = vim.fn.timer_start(INTERVAL, function(timer)
     if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
       vim.fn.timer_stop(timer)
       return
@@ -78,30 +89,25 @@ M.play = function()
       return
     end
 
-    local word = state.words[state.current_index]
-    local word_width = vim.fn.strdisplaywidth(word)
-    local start_col = math.max(0, math.floor((win_width - word_width) / 2))
-
-    local line = string.rep(" ", start_col) .. word
-
-    utils.with_buffer_mutation(state.buf, function()
-      vim.api.nvim_buf_set_lines(state.buf, line_number, line_number + 1, false, { line })
-    end)
+    write_word(state.words[state.current_index])
 
     state.current_index = state.current_index + 1
   end, { ["repeat"] = -1 })
 end
 
 M.pause = function()
-  stop_timer()
+  clear_timer()
 end
 
 local function start_session()
-  stop_timer()
+  clear_timer()
   init_empty_buffer()
 
   if config.auto_run then
     M.play()
+  else
+    write_word(state.words[state.current_index])
+    state.current_index = state.current_index + 1
   end
 end
 
