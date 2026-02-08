@@ -8,7 +8,7 @@ local config = {
   initial_wpm = 300,
 }
 
----@class MyModule
+---@class RsvpModule
 local M = {}
 
 ---@type Config
@@ -29,8 +29,10 @@ local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
 ---@field timer integer
 ---@field words string[]
 ---@field current_index integer
+---@field running boolean
 local initial_state = {
   current_index = 1,
+  running = false,
 }
 
 ---@type State
@@ -76,7 +78,12 @@ local function write_word(word)
 end
 
 M.play = function()
-  local interval = math.floor(60000 / config.initial_wpm)
+  if state.running then
+    return
+  end
+
+  local interval = math.floor(60000 / M.config.initial_wpm)
+  state.running = true
   state.timer = vim.fn.timer_start(interval, function(timer)
     if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
       vim.fn.timer_stop(timer)
@@ -96,6 +103,11 @@ M.play = function()
 end
 
 M.pause = function()
+  if not state.running then
+    return
+  end
+
+  state.running = false
   clear_timer()
 end
 
@@ -103,7 +115,7 @@ local function start_session()
   clear_timer()
   init_empty_buffer()
 
-  if config.auto_run then
+  if M.config.auto_run then
     M.play()
   else
     write_word(state.words[state.current_index])
@@ -156,12 +168,16 @@ local function init_window()
 
   vim.api.nvim_create_autocmd("CmdlineEnter", {
     buffer = state.buf,
-    callback = M.pause,
+    callback = function()
+      M.pause()
+    end,
   })
 
   vim.api.nvim_create_autocmd("CmdlineLeave", {
     buffer = state.buf,
-    callback = M.play,
+    callback = function()
+      M.play()
+    end,
   })
 end
 
