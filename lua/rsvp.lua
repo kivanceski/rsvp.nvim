@@ -26,7 +26,7 @@ local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
 ---@class State
 ---@field buf integer
 ---@field win integer
----@field timer integer
+---@field timer? uv.uv_timer_t
 ---@field words string[]
 ---@field current_index integer
 ---@field running boolean
@@ -40,7 +40,8 @@ local state = vim.deepcopy(initial_state)
 
 local function clear_timer()
   if state.timer then
-    vim.fn.timer_stop(state.timer)
+    state.timer:stop()
+    state.timer:close()
     state.timer = nil
   end
 end
@@ -59,7 +60,6 @@ end
 
 local function close_rsvp()
   pcall(vim.api.nvim_win_close, state.win, true)
-  clear_timer()
   state = vim.tbl_deep_extend("force", state, initial_state)
 end
 
@@ -84,22 +84,27 @@ M.play = function()
 
   local interval = math.floor(60000 / M.config.initial_wpm)
   state.running = true
-  state.timer = vim.fn.timer_start(interval, function(timer)
-    if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
-      vim.fn.timer_stop(timer)
-      return
-    end
+  state.timer = vim.uv.new_timer()
 
-    if state.current_index > #state.words then
-      vim.fn.timer_stop(timer)
-      state.timer = nil
-      return
-    end
+  state.timer:start(
+    interval,
+    interval,
+    vim.schedule_wrap(function()
+      if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
+        clear_timer()
+        return
+      end
 
-    write_word(state.words[state.current_index])
+      if state.current_index > #state.words then
+        clear_timer()
+        return
+      end
 
-    state.current_index = state.current_index + 1
-  end, { ["repeat"] = -1 })
+      write_word(state.words[state.current_index])
+
+      state.current_index = state.current_index + 1
+    end)
+  )
 end
 
 M.pause = function()
@@ -164,20 +169,6 @@ local function init_window()
     buffer = state.buf,
     once = true,
     callback = close_rsvp,
-  })
-
-  vim.api.nvim_create_autocmd("CmdlineEnter", {
-    buffer = state.buf,
-    callback = function()
-      M.pause()
-    end,
-  })
-
-  vim.api.nvim_create_autocmd("CmdlineLeave", {
-    buffer = state.buf,
-    callback = function()
-      M.play()
-    end,
   })
 end
 
