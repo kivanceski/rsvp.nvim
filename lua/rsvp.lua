@@ -92,11 +92,13 @@ M.play = function()
     vim.schedule_wrap(function()
       if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
         clear_timer()
+        state.running = false
         return
       end
 
       if state.current_index > #state.words then
         clear_timer()
+        state.running = false
         return
       end
 
