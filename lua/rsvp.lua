@@ -22,7 +22,6 @@ M.setup = function(args)
 end
 
 local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
-local INTERVAL = math.floor(60000 / config.initial_wpm)
 
 ---@class State
 ---@field buf integer
@@ -77,7 +76,8 @@ local function write_word(word)
 end
 
 M.play = function()
-  state.timer = vim.fn.timer_start(INTERVAL, function(timer)
+  local interval = math.floor(60000 / config.initial_wpm)
+  state.timer = vim.fn.timer_start(interval, function(timer)
     if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
       vim.fn.timer_stop(timer)
       return
