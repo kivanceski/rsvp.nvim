@@ -22,8 +22,10 @@ local state = vim.deepcopy(initial_state)
 ---@class Config
 ---@field auto_run boolean
 ---@field initial_wpm integer
+---@field wpm_step_size integer
 local config = {
   auto_run = true,
+  wpm_step_size = 25,
 }
 
 ---@class RsvpModule
@@ -197,12 +199,22 @@ local function create_floating_window()
   -- attach keymaps
   vim.keymap.set("n", "q", close_rsvp, { buffer = buf, nowait = true, silent = true })
   vim.keymap.set("n", "<Esc>", close_rsvp, { buffer = buf, nowait = true, silent = true })
-  vim.keymap.set("n", "<", function()
-    M.adjust_wpm(-25)
-  end, { buffer = buf, nowait = true, silent = true, desc = "Decrease WPM (-25)" })
-  vim.keymap.set("n", ">", function()
-    M.adjust_wpm(25)
-  end, { buffer = buf, nowait = true, silent = true, desc = "Increase WPM (+25)" })
+  vim.keymap.set(
+    "n",
+    "<",
+    function()
+      M.adjust_wpm(-M.config.wpm_step_size)
+    end,
+    { buffer = buf, nowait = true, silent = true, desc = string.format("Decrease WPM (-%d)", M.config.wpm_step_size) }
+  )
+  vim.keymap.set(
+    "n",
+    ">",
+    function()
+      M.adjust_wpm(M.config.wpm_step_size)
+    end,
+    { buffer = buf, nowait = true, silent = true, desc = string.format("Increase WPM (+%d)", M.config.wpm_step_size) }
+  )
 
   return { buf = buf, win = win }
 end
