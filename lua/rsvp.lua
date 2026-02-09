@@ -79,6 +79,26 @@ local function write_word(word)
   end)
 end
 
+local function write_status_line()
+  local progress_str = string.format("%d/%d", state.current_index, #state.words)
+  local wpm_str = string.format("WPM: %d", state.wpm)
+  local progress_percentage = math.floor(state.current_index / #state.words * 100)
+  local progress_percentage_str = string.format("%d%%", progress_percentage)
+  local paused_text = not state.running and "[PAUSED]" or ""
+
+  local status_line = string.format("%s %s | %s | %s", paused_text, progress_str, progress_percentage_str, wpm_str)
+
+  local win_width = vim.api.nvim_win_get_width(0)
+  local status_width = vim.fn.strdisplaywidth(status_line)
+  local start_col = math.floor(win_width - status_width)
+
+  local line = string.rep(" ", start_col) .. status_line
+
+  utils.with_buffer_mutation(state.buf, function()
+    vim.api.nvim_buf_set_lines(state.buf, 0, 1, false, { line })
+  end)
+end
+
 M.play = function()
   if state.running then
     return
@@ -105,6 +125,7 @@ M.play = function()
       end
 
       write_word(state.words[state.current_index])
+      write_status_line()
 
       state.current_index = state.current_index + 1
       vim.cmd("redraw")
@@ -119,6 +140,7 @@ M.pause = function()
 
   state.running = false
   clear_timer()
+  write_status_line()
 end
 
 ---@param diff integer
@@ -129,7 +151,9 @@ M.adjust_wpm = function(diff)
   elseif new_wpm < 50 then
     new_wpm = 50
   end
+
   state.wpm = new_wpm
+  write_status_line()
 
   if state.timer then
     state.timer:set_repeat(math.floor(60000 / state.wpm))
@@ -139,6 +163,7 @@ end
 local function start_session()
   clear_timer()
   init_empty_buffer()
+  write_status_line()
 
   if M.config.auto_run then
     M.play()
