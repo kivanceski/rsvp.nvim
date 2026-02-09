@@ -105,6 +105,7 @@ M.play = function()
       write_word(state.words[state.current_index])
 
       state.current_index = state.current_index + 1
+      vim.cmd("redraw")
     end)
   )
 end
