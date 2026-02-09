@@ -1,11 +1,29 @@
 local utils = require("utils")
 
+local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
+
+---@class State
+---@field buf integer
+---@field win integer
+---@field timer? uv.uv_timer_t
+---@field words string[]
+---@field current_index integer
+---@field running boolean
+---@field wpm integer
+local initial_state = {
+  current_index = 1,
+  running = false,
+  wpm = 300,
+}
+
+---@type State
+local state = vim.deepcopy(initial_state)
+
 ---@class Config
 ---@field auto_run boolean
 ---@field initial_wpm integer
 local config = {
   auto_run = true,
-  initial_wpm = 300,
 }
 
 ---@class RsvpModule
@@ -19,24 +37,8 @@ M.config = config
 -- you can also put some validation here for those.
 M.setup = function(args)
   M.config = vim.tbl_deep_extend("force", M.config, args or {})
+  state.wpm = M.config.initial_wpm
 end
-
-local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
-
----@class State
----@field buf integer
----@field win integer
----@field timer? uv.uv_timer_t
----@field words string[]
----@field current_index integer
----@field running boolean
-local initial_state = {
-  current_index = 1,
-  running = false,
-}
-
----@type State
-local state = vim.deepcopy(initial_state)
 
 local function clear_timer()
   if state.timer then
@@ -82,7 +84,7 @@ M.play = function()
     return
   end
 
-  local interval = math.floor(60000 / M.config.initial_wpm)
+  local interval = math.floor(60000 / state.wpm)
   state.running = true
   state.timer = vim.uv.new_timer()
 
@@ -117,6 +119,21 @@ M.pause = function()
 
   state.running = false
   clear_timer()
+end
+
+---@param diff integer
+M.adjust_wpm = function(diff)
+  local new_wpm = state.wpm + diff
+  if new_wpm > 1000 then
+    new_wpm = 1000
+  elseif new_wpm < 50 then
+    new_wpm = 50
+  end
+  state.wpm = new_wpm
+
+  if state.timer then
+    state.timer:set_repeat(math.floor(60000 / state.wpm))
+  end
 end
 
 local function start_session()
@@ -155,6 +172,12 @@ local function create_floating_window()
   -- attach keymaps
   vim.keymap.set("n", "q", close_rsvp, { buffer = buf, nowait = true, silent = true })
   vim.keymap.set("n", "<Esc>", close_rsvp, { buffer = buf, nowait = true, silent = true })
+  vim.keymap.set("n", "<", function()
+    M.adjust_wpm(-25)
+  end, { buffer = buf, nowait = true, silent = true, desc = "Decrease WPM (-25)" })
+  vim.keymap.set("n", ">", function()
+    M.adjust_wpm(25)
+  end, { buffer = buf, nowait = true, silent = true, desc = "Increase WPM (+25)" })
 
   return { buf = buf, win = win }
 end
