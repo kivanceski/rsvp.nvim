@@ -2,6 +2,14 @@ local utils = require("utils")
 
 local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
 
+---@class Keymaps
+---@field decrease_wpm string
+---@field increase_wpm string
+local keymaps = {
+  decrease_wpm = "<",
+  increase_wpm = ">",
+}
+
 ---@class State
 ---@field buf integer
 ---@field win integer
@@ -20,10 +28,12 @@ local initial_state = {
 local state = vim.deepcopy(initial_state)
 
 ---@class Config
+---@field keymaps Keymaps
 ---@field auto_run boolean
 ---@field initial_wpm integer
 ---@field wpm_step_size integer
 local config = {
+  keymaps = keymaps,
   auto_run = true,
   wpm_step_size = 25,
 }
@@ -201,7 +211,7 @@ local function create_floating_window()
   vim.keymap.set("n", "<Esc>", close_rsvp, { buffer = buf, nowait = true, silent = true })
   vim.keymap.set(
     "n",
-    "<",
+    M.config.keymaps.decrease_wpm,
     function()
       M.adjust_wpm(-M.config.wpm_step_size)
     end,
@@ -209,7 +219,7 @@ local function create_floating_window()
   )
   vim.keymap.set(
     "n",
-    ">",
+    M.config.keymaps.increase_wpm,
     function()
       M.adjust_wpm(M.config.wpm_step_size)
     end,
