@@ -1,5 +1,3 @@
-local utils = require("utils")
-
 local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
 
 ---@class Keymaps
@@ -60,14 +58,30 @@ local function clear_timer()
   end
 end
 
+---@param buf integer
+---@param fn fun()
+local function with_buffer_mutation(buf, fn)
+  vim.bo[buf].modifiable = true
+  vim.bo[buf].readonly = false
+
+  local ok, err = pcall(fn)
+
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].readonly = true
+
+  if not ok then
+    error(err)
+  end
+end
+
 local function init_empty_buffer()
   local empty_lines = {}
 
-  for _ = 1, vim.o.lines do
+  for _ = 1, vim.o.lines - 2 do
     table.insert(empty_lines, "")
   end
 
-  utils.with_buffer_mutation(state.buf, function()
+  with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, empty_lines)
   end)
 end
@@ -77,16 +91,24 @@ local function close_rsvp()
   state = vim.tbl_deep_extend("force", state, initial_state)
 end
 
+---@param text string
+---@return string
+local center_text = function(text)
+  local win_width = vim.api.nvim_win_get_width(0)
+  local text_width = vim.fn.strdisplaywidth(text)
+  local start_col = math.max(0, math.floor((win_width - text_width) / 2))
+
+  local line = string.rep(" ", start_col) .. text
+
+  return line
+end
+
 ---@param word string
 local function write_word(word)
   local line_number = math.floor(vim.o.lines / 2)
-  local win_width = vim.api.nvim_win_get_width(0)
-  local word_width = vim.fn.strdisplaywidth(word)
-  local start_col = math.max(0, math.floor((win_width - word_width) / 2))
+  local line = center_text(word)
 
-  local line = string.rep(" ", start_col) .. word
-
-  utils.with_buffer_mutation(state.buf, function()
+  with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, line_number, line_number + 1, false, { line })
   end)
 end
@@ -106,8 +128,42 @@ local function write_status_line()
 
   local line = string.rep(" ", start_col) .. status_line
 
-  utils.with_buffer_mutation(state.buf, function()
+  with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, 0, 1, false, { line })
+  end)
+end
+
+local function write_help_line()
+  local help_line = 'Help: "?"'
+
+  local line = center_text(help_line)
+
+  with_buffer_mutation(state.buf, function()
+    vim.api.nvim_buf_set_lines(state.buf, -1, -1, false, { line })
+  end)
+end
+
+local function write_keymap_line()
+  local decrease_wpm = "Decrease WPM (-"
+    .. M.config.wpm_step_size
+    .. "): "
+    .. '"'
+    .. M.config.keymaps.decrease_wpm
+    .. '"'
+
+  local increase_wpm = "Increase WPM (+"
+    .. M.config.wpm_step_size
+    .. "): "
+    .. '"'
+    .. M.config.keymaps.increase_wpm
+    .. '"'
+
+  local keymap_line = string.format("%s | PLAY/PAUSE: <space> | %s", decrease_wpm, increase_wpm)
+
+  local line = center_text(keymap_line)
+
+  with_buffer_mutation(state.buf, function()
+    vim.api.nvim_buf_set_lines(state.buf, -2, -2, false, { line })
   end)
 end
 
@@ -155,6 +211,14 @@ M.pause = function()
   write_status_line()
 end
 
+M.toggle = function()
+  if state.running then
+    M.pause()
+  else
+    M.play()
+  end
+end
+
 ---@param diff integer
 M.adjust_wpm = function(diff)
   local new_wpm = state.wpm + diff
@@ -176,6 +240,8 @@ local function start_session()
   clear_timer()
   init_empty_buffer()
   write_status_line()
+  write_help_line()
+  write_keymap_line()
 
   if M.config.auto_run then
     M.play()
@@ -209,6 +275,7 @@ local function create_floating_window()
   -- attach keymaps
   vim.keymap.set("n", "q", close_rsvp, { buffer = buf, nowait = true, silent = true })
   vim.keymap.set("n", "<Esc>", close_rsvp, { buffer = buf, nowait = true, silent = true })
+  vim.keymap.set("n", "<space>", M.toggle, { buffer = buf, nowait = true, silent = true })
   vim.keymap.set(
     "n",
     M.config.keymaps.decrease_wpm,
