@@ -333,7 +333,7 @@ local function init_window()
   })
 end
 
-M.refresh = function()
+M.reset = function()
   close_rsvp()
   init_window()
   start_session()
