@@ -6,6 +6,8 @@ local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
 local keymaps = {
   decrease_wpm = "<",
   increase_wpm = ">",
+  previous_step = "H",
+  next_step = "L",
 }
 
 ---@class State
@@ -211,6 +213,17 @@ M.pause = function()
   write_status_line()
 end
 
+---@param relative_step integer
+M.set_step = function(relative_step)
+  if state.current_index + relative_step > #state.words or state.current_index + relative_step < 1 then
+    return
+  end
+  M.pause()
+  state.current_index = state.current_index + relative_step
+  write_word(state.words[state.current_index])
+  write_status_line()
+end
+
 M.toggle = function()
   if state.running then
     M.pause()
@@ -292,6 +305,14 @@ local function create_floating_window()
     end,
     { buffer = buf, nowait = true, silent = true, desc = string.format("Increase WPM (+%d)", M.config.wpm_step_size) }
   )
+
+  vim.keymap.set("n", M.config.keymaps.previous_step, function()
+    M.set_step(-1)
+  end, { buffer = buf, nowait = true, silent = true, desc = "Previous step" })
+
+  vim.keymap.set("n", M.config.keymaps.next_step, function()
+    M.set_step(1)
+  end, { buffer = buf, nowait = true, silent = true, desc = "Next step" })
 
   return { buf = buf, win = win }
 end
