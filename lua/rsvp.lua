@@ -4,6 +4,7 @@ local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
 ---@field decrease_wpm string
 ---@field increase_wpm string
 local keymaps = {
+  reset = "r",
   decrease_wpm = "<",
   increase_wpm = ">",
   previous_step = "H",
@@ -289,6 +290,7 @@ local function create_floating_window()
   vim.keymap.set("n", "q", close_rsvp, { buffer = buf, nowait = true, silent = true })
   vim.keymap.set("n", "<Esc>", close_rsvp, { buffer = buf, nowait = true, silent = true })
   vim.keymap.set("n", "<space>", M.toggle, { buffer = buf, nowait = true, silent = true })
+  vim.keymap.set("n", "r", M.reset, { buffer = buf, nowait = true, silent = true })
   vim.keymap.set(
     "n",
     M.config.keymaps.decrease_wpm,
