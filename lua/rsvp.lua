@@ -367,6 +367,10 @@ M.rsvp = function(opts)
     end
   end
 
+  if #words == 0 then
+    vim.notify("No words found", vim.log.levels.ERROR)
+    return
+  end
   state.words = words
 
   init_window()
