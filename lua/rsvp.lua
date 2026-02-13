@@ -96,7 +96,7 @@ end
 
 ---@param text string
 ---@return string
-local center_text = function(text)
+local function center_text(text)
   local win_width = vim.api.nvim_win_get_width(0)
   local text_width = vim.fn.strdisplaywidth(text)
   local start_col = math.max(0, math.floor((win_width - text_width) / 2))
@@ -250,7 +250,7 @@ M.adjust_wpm = function(diff)
   end
 end
 
-local render = function()
+local function render()
   write_status_line()
   write_keymap_line()
   write_help_line()
@@ -293,32 +293,44 @@ local function create_floating_window()
   -- attach keymaps
   vim.keymap.set("n", "q", close_rsvp, { buffer = buf, nowait = true, silent = true })
   vim.keymap.set("n", "<Esc>", close_rsvp, { buffer = buf, nowait = true, silent = true })
-  vim.keymap.set("n", "<space>", M.toggle, { buffer = buf, nowait = true, silent = true })
-  vim.keymap.set("n", "r", M.reset, { buffer = buf, nowait = true, silent = true })
-  vim.keymap.set(
-    "n",
-    M.config.keymaps.decrease_wpm,
-    function()
-      M.adjust_wpm(-M.config.wpm_step_size)
-    end,
-    { buffer = buf, nowait = true, silent = true, desc = string.format("Decrease WPM (-%d)", M.config.wpm_step_size) }
-  )
-  vim.keymap.set(
-    "n",
-    M.config.keymaps.increase_wpm,
-    function()
-      M.adjust_wpm(M.config.wpm_step_size)
-    end,
-    { buffer = buf, nowait = true, silent = true, desc = string.format("Increase WPM (+%d)", M.config.wpm_step_size) }
-  )
+
+  return { buf = buf, win = win }
+end
+
+local function init_rsvp_window()
+  if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+    return
+  end
+
+  local win_state = create_floating_window()
+  state = vim.tbl_deep_extend("force", state, win_state)
+
+  vim.keymap.set("n", "<space>", M.toggle, { buffer = state.buf, nowait = true, silent = true })
+  vim.keymap.set("n", "r", M.reset, { buffer = state.buf, nowait = true, silent = true })
+  vim.keymap.set("n", M.config.keymaps.decrease_wpm, function()
+    M.adjust_wpm(-M.config.wpm_step_size)
+  end, {
+    buffer = state.buf,
+    nowait = true,
+    silent = true,
+    desc = string.format("Decrease WPM (-%d)", M.config.wpm_step_size),
+  })
+  vim.keymap.set("n", M.config.keymaps.increase_wpm, function()
+    M.adjust_wpm(M.config.wpm_step_size)
+  end, {
+    buffer = state.buf,
+    nowait = true,
+    silent = true,
+    desc = string.format("Increase WPM (+%d)", M.config.wpm_step_size),
+  })
 
   vim.keymap.set("n", M.config.keymaps.previous_step, function()
     M.set_step(-1)
-  end, { buffer = buf, nowait = true, silent = true, desc = "Previous step" })
+  end, { buffer = state.buf, nowait = true, silent = true, desc = "Previous step" })
 
   vim.keymap.set("n", M.config.keymaps.next_step, function()
     M.set_step(1)
-  end, { buffer = buf, nowait = true, silent = true, desc = "Next step" })
+  end, { buffer = state.buf, nowait = true, silent = true, desc = "Next step" })
 
   vim.api.nvim_create_autocmd("VimResized", {
     callback = function()
@@ -326,17 +338,6 @@ local function create_floating_window()
       render()
     end,
   })
-
-  return { buf = buf, win = win }
-end
-
-local function init_window()
-  if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
-    return
-  end
-
-  local win_state = create_floating_window()
-  state = vim.tbl_deep_extend("force", state, win_state)
 
   -- attach cleanup
   vim.api.nvim_create_autocmd({ "BufWipeout", "BufUnload" }, {
@@ -348,7 +349,7 @@ end
 
 M.reset = function()
   close_rsvp()
-  init_window()
+  init_rsvp_window()
   start_session()
 end
 
@@ -373,7 +374,7 @@ M.rsvp = function(opts)
   end
   state.words = words
 
-  init_window()
+  init_rsvp_window()
   start_session()
 end
 
