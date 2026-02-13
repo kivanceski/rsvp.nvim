@@ -89,6 +89,22 @@ local function init_empty_buffer()
   end)
 end
 
+---@return string[]
+local function get_help_text()
+  return {
+    "RSVP Help (Quit: q or <Esc>)",
+    "",
+    "Play/Pause: <space>",
+    'Reset: "r"',
+    string.format("Decrease WPM (-%d):  %s", M.config.wpm_step_size, '"<"'),
+    string.format("Increase WPM (+%d):  %s", M.config.wpm_step_size, '">"'),
+    string.format('Previous step:  "%s"', M.config.keymaps.previous_step),
+    string.format('Next step:  "%s"', M.config.keymaps.next_step),
+    "",
+    'Help: "g?"',
+  }
+end
+
 local function close_rsvp()
   pcall(vim.api.nvim_win_close, state.win, true)
   state = vim.tbl_deep_extend("force", state, initial_state)
@@ -161,7 +177,7 @@ local function write_keymap_line()
 end
 
 local function write_help_line()
-  local help_line = 'Help: "?"'
+  local help_line = 'Help: "g?"'
 
   local line = center_text(help_line)
 
@@ -250,6 +266,25 @@ M.adjust_wpm = function(diff)
   end
 end
 
+local function render_help()
+  M.pause()
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, get_help_text())
+  vim.api.nvim_set_current_buf(bufnr)
+
+  vim.bo[bufnr].modifiable = false
+  vim.bo[bufnr].buftype = "nofile"
+  vim.bo[bufnr].bufhidden = "wipe"
+  vim.bo[bufnr].readonly = true
+
+  vim.keymap.set("n", "q", function()
+    vim.api.nvim_buf_delete(0, {})
+  end, { buffer = bufnr, nowait = true, silent = true })
+  vim.keymap.set("n", "<Esc>", function()
+    vim.api.nvim_buf_delete(0, {})
+  end, { buffer = bufnr, nowait = true, silent = true })
+end
+
 local function render()
   write_status_line()
   write_keymap_line()
@@ -331,6 +366,13 @@ local function init_rsvp_window()
   vim.keymap.set("n", M.config.keymaps.next_step, function()
     M.set_step(1)
   end, { buffer = state.buf, nowait = true, silent = true, desc = "Next step" })
+
+  vim.keymap.set(
+    "n",
+    "g?",
+    render_help,
+    { buffer = state.buf, nowait = true, silent = true, desc = "RSVP - Open help" }
+  )
 
   vim.api.nvim_create_autocmd("VimResized", {
     callback = function()
