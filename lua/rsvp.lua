@@ -136,16 +136,6 @@ local function write_status_line()
   end)
 end
 
-local function write_help_line()
-  local help_line = 'Help: "?"'
-
-  local line = center_text(help_line)
-
-  with_buffer_mutation(state.buf, function()
-    vim.api.nvim_buf_set_lines(state.buf, -1, -1, false, { line })
-  end)
-end
-
 local function write_keymap_line()
   local decrease_wpm = "Decrease WPM (-"
     .. M.config.wpm_step_size
@@ -167,6 +157,16 @@ local function write_keymap_line()
 
   with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, -2, -2, false, { line })
+  end)
+end
+
+local function write_help_line()
+  local help_line = 'Help: "?"'
+
+  local line = center_text(help_line)
+
+  with_buffer_mutation(state.buf, function()
+    vim.api.nvim_buf_set_lines(state.buf, -1, -1, false, { line })
   end)
 end
 
@@ -250,12 +250,16 @@ M.adjust_wpm = function(diff)
   end
 end
 
+local render = function()
+  write_status_line()
+  write_keymap_line()
+  write_help_line()
+end
+
 local function start_session()
   clear_timer()
   init_empty_buffer()
-  write_status_line()
-  write_help_line()
-  write_keymap_line()
+  render()
 
   if M.config.auto_run then
     M.play()
@@ -315,6 +319,13 @@ local function create_floating_window()
   vim.keymap.set("n", M.config.keymaps.next_step, function()
     M.set_step(1)
   end, { buffer = buf, nowait = true, silent = true, desc = "Next step" })
+
+  vim.api.nvim_create_autocmd("VimResized", {
+    callback = function()
+      init_empty_buffer()
+      render()
+    end,
+  })
 
   return { buf = buf, win = win }
 end
