@@ -152,6 +152,16 @@ local function write_status_line()
   end)
 end
 
+local function write_help_line()
+  local help_line = 'Help: "g?"'
+
+  local line = center_text(help_line)
+
+  with_buffer_mutation(state.buf, function()
+    vim.api.nvim_buf_set_lines(state.buf, -2, -2, false, { line })
+  end)
+end
+
 local function write_keymap_line()
   local decrease_wpm = "Decrease WPM (-"
     .. M.config.wpm_step_size
@@ -170,16 +180,6 @@ local function write_keymap_line()
   local keymap_line = string.format("%s | PLAY/PAUSE: <space> | %s", decrease_wpm, increase_wpm)
 
   local line = center_text(keymap_line)
-
-  with_buffer_mutation(state.buf, function()
-    vim.api.nvim_buf_set_lines(state.buf, -2, -2, false, { line })
-  end)
-end
-
-local function write_help_line()
-  local help_line = 'Help: "g?"'
-
-  local line = center_text(help_line)
 
   with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, -1, -1, false, { line })
@@ -278,10 +278,10 @@ local function render_help()
   vim.bo[bufnr].readonly = true
 
   vim.keymap.set("n", "q", function()
-    vim.api.nvim_buf_delete(0, {})
+    vim.api.nvim_buf_delete(bufnr, {})
   end, { buffer = bufnr, nowait = true, silent = true })
   vim.keymap.set("n", "<Esc>", function()
-    vim.api.nvim_buf_delete(0, {})
+    vim.api.nvim_buf_delete(bufnr, {})
   end, { buffer = bufnr, nowait = true, silent = true })
 end
 
