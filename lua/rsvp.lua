@@ -45,12 +45,45 @@ local M = {}
 ---@type Config
 M.config = config
 
+local hl_ns = vim.api.nvim_create_namespace("rsvp_hl")
+
+local HL_GROUPS = {
+  main = "RsvpMain",
+  accent = "RsvpAccent",
+  ghost_text = "RsvpGhostText",
+}
+
+local LINE_INDICES = {
+  status_line = 0,
+  keymap_line = -1,
+  help_line = -2,
+  progress_bar = -7,
+}
+
+---@param buf integer
+---@param line integer
+---@param str string
+---@param pattern string
+---@param hl_group string
+local function set_hl_group(buf, line, str, pattern, hl_group)
+  local s, e = str:find(pattern)
+  local linenr = vim.api.nvim_buf_line_count(buf) + line
+  vim.api.nvim_buf_set_extmark(buf, hl_ns, linenr, s - 1, { end_col = e, hl_group = hl_group })
+end
+
+local function init_highlights()
+  vim.api.nvim_set_hl(0, "RsvpMain", { link = "@keyword" })
+  vim.api.nvim_set_hl(0, "RsvpAccent", { link = "@keyword" })
+  vim.api.nvim_set_hl(0, "RsvpGhostText", { link = "NonText" })
+end
+
 ---@param args Config?
 -- you can define your setup function here. Usually configurations can be merged, accepting outside params and
 -- you can also put some validation here for those.
 M.setup = function(args)
   M.config = vim.tbl_deep_extend("force", M.config, args or {})
   state.wpm = M.config.initial_wpm
+  init_highlights()
 end
 
 local function clear_timer()
@@ -143,12 +176,12 @@ local function write_status_line()
 
   local win_width = vim.api.nvim_win_get_width(0)
   local status_width = vim.fn.strdisplaywidth(status_line)
-  local start_col = math.floor(win_width - status_width)
+  local start_col = math.floor(win_width - status_width - 8)
 
   local line = string.rep(" ", start_col) .. status_line
 
   with_buffer_mutation(state.buf, function()
-    vim.api.nvim_buf_set_lines(state.buf, 0, 1, false, { line })
+    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.status_line, LINE_INDICES.status_line + 1, false, { line })
   end)
 end
 
@@ -165,7 +198,7 @@ local write_proggress_bar = function()
   local line = center_text(progress_str .. unfinished_str)
 
   with_buffer_mutation(state.buf, function()
-    vim.api.nvim_buf_set_lines(state.buf, -7, -6, false, { line })
+    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.progress_bar, LINE_INDICES.progress_bar + 1, false, { line })
   end)
 end
 
@@ -175,7 +208,7 @@ local function write_help_line()
   local line = center_text(help_line)
 
   with_buffer_mutation(state.buf, function()
-    vim.api.nvim_buf_set_lines(state.buf, -2, -2, false, { line })
+    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.help_line, LINE_INDICES.help_line, false, { line })
   end)
 end
 
@@ -199,7 +232,7 @@ local function write_keymap_line()
   local line = center_text(keymap_line)
 
   with_buffer_mutation(state.buf, function()
-    vim.api.nvim_buf_set_lines(state.buf, -1, -1, false, { line })
+    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.keymap_line, LINE_INDICES.keymap_line, false, { line })
   end)
 end
 
