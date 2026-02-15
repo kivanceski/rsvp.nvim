@@ -269,20 +269,35 @@ end
 local function render_help()
   M.pause()
   local bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, get_help_text())
-  vim.api.nvim_set_current_buf(bufnr)
+
+  local help_text = get_help_text()
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, help_text)
 
   vim.bo[bufnr].modifiable = false
   vim.bo[bufnr].buftype = "nofile"
   vim.bo[bufnr].bufhidden = "wipe"
   vim.bo[bufnr].readonly = true
 
-  vim.keymap.set("n", "q", function()
-    vim.api.nvim_buf_delete(bufnr, {})
-  end, { buffer = bufnr, nowait = true, silent = true })
-  vim.keymap.set("n", "<Esc>", function()
-    vim.api.nvim_buf_delete(bufnr, {})
-  end, { buffer = bufnr, nowait = true, silent = true })
+  local width = math.min(80, vim.o.columns - 4)
+  local height = math.min(#help_text + 2, vim.o.lines - 4)
+
+  local win = vim.api.nvim_open_win(bufnr, true, {
+    relative = "editor",
+    style = "minimal",
+    width = width,
+    height = height,
+    col = math.floor((vim.o.columns - width) / 2),
+    row = math.floor((vim.o.lines - height) / 2),
+  })
+
+  local function close_help()
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+  end
+
+  vim.keymap.set("n", "q", close_help, { buffer = bufnr, nowait = true, silent = true })
+  vim.keymap.set("n", "<Esc>", close_help, { buffer = bufnr, nowait = true, silent = true })
 end
 
 local function render()
