@@ -153,12 +153,19 @@ local function write_status_line()
 end
 
 local write_proggress_bar = function()
-  local progress_ratio = math.floor(state.current_index / #state.words)
+  local progress_bar_width = 80
 
-  local progress_bar_width = vim.o.columns - 4
+  local progress_ratio = state.current_index / #state.words
+
+  local progress_count = math.floor(progress_bar_width * progress_ratio)
+
+  local progress_str = string.rep("█", progress_count)
+  local unfinished_str = string.rep("▒", progress_bar_width - progress_count)
+
+  local line = center_text(progress_str .. unfinished_str)
 
   with_buffer_mutation(state.buf, function()
-    vim.api.nvim_buf_set_lines(state.buf, -3, -3, false, { line })
+    vim.api.nvim_buf_set_lines(state.buf, -7, -6, false, { line })
   end)
 end
 
