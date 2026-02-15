@@ -152,6 +152,16 @@ local function write_status_line()
   end)
 end
 
+local write_proggress_bar = function()
+  local progress_ratio = math.floor(state.current_index / #state.words)
+
+  local progress_bar_width = vim.o.columns - 4
+
+  with_buffer_mutation(state.buf, function()
+    vim.api.nvim_buf_set_lines(state.buf, -3, -3, false, { line })
+  end)
+end
+
 local function write_help_line()
   local help_line = 'Help: "g?"'
 
@@ -213,6 +223,7 @@ M.play = function()
 
       write_word(state.words[state.current_index])
       write_status_line()
+      write_proggress_bar()
 
       state.current_index = state.current_index + 1
       vim.cmd("redraw")
@@ -278,8 +289,8 @@ local function render_help()
   vim.bo[bufnr].bufhidden = "wipe"
   vim.bo[bufnr].readonly = true
 
-  local width = math.min(80, vim.o.columns - 4)
-  local height = math.min(#help_text + 2, vim.o.lines - 4)
+  local width = 80
+  local height = #help_text + 2
 
   local win = vim.api.nvim_open_win(bufnr, true, {
     relative = "editor",
