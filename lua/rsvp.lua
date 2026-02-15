@@ -15,14 +15,18 @@ local keymaps = {
 ---@field buf integer
 ---@field win integer
 ---@field timer? uv.uv_timer_t
+---@field duration_timer? uv.uv_timer_t
+---@field duration integer
 ---@field words string[]
 ---@field current_index integer
 ---@field running boolean
+---@field finished boolean
 ---@field wpm integer
 local initial_state = {
   current_index = 1,
   running = false,
   wpm = 300,
+  duration = 0,
 }
 
 ---@type State
@@ -45,6 +49,8 @@ local M = {}
 ---@type Config
 M.config = config
 
+local TIMER_SENSITIVITY = 100
+
 local hl_ns = vim.api.nvim_create_namespace("rsvp_hl")
 
 local HL_GROUPS = {
@@ -55,6 +61,7 @@ local HL_GROUPS = {
 
 local LINE_INDICES = {
   status_line = 0,
+  duration_line = 3,
   keymap_line = -1,
   help_line = -2,
   progress_bar = -7,
@@ -91,6 +98,14 @@ local function clear_timer()
     state.timer:stop()
     state.timer:close()
     state.timer = nil
+  end
+end
+
+local function clear_duration_timer()
+  if state.duration_timer then
+    state.duration_timer:stop()
+    state.duration_timer:close()
+    state.duration_timer = nil
   end
 end
 
@@ -185,6 +200,16 @@ local function write_status_line()
   end)
 end
 
+local function write_duration_line()
+  local duration_line = string.format("DONE in %.2f second(s)!", state.duration / TIMER_SENSITIVITY)
+
+  local line = center_text(duration_line)
+
+  with_buffer_mutation(state.buf, function()
+    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.duration_line, LINE_INDICES.duration_line + 1, false, { line })
+  end)
+end
+
 local write_proggress_bar = function()
   local progress_bar_width = 80
 
@@ -245,6 +270,18 @@ M.play = function()
   state.running = true
   state.timer = vim.uv.new_timer()
 
+  if not state.duration_timer then
+    state.duration_timer = vim.uv.new_timer()
+  end
+
+  state.duration_timer:start(
+    1000 / TIMER_SENSITIVITY,
+    1000 / TIMER_SENSITIVITY,
+    vim.schedule_wrap(function()
+      state.duration = state.duration + 1
+    end)
+  )
+
   state.timer:start(
     interval,
     interval,
@@ -257,6 +294,10 @@ M.play = function()
 
       if state.current_index > #state.words then
         clear_timer()
+        clear_duration_timer()
+        write_duration_line()
+
+        state.finished = true
         state.running = false
         return
       end
@@ -276,6 +317,7 @@ M.pause = function()
     return
   end
 
+  state.duration_timer:stop()
   state.running = false
   clear_timer()
   write_status_line()
