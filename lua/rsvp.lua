@@ -81,8 +81,12 @@ end
 ---@param str string
 ---@param pattern string
 ---@param hl_group string
-local function set_hl_group(buf, line, str, pattern, hl_group)
-  local s, e = str:find(pattern)
+---@param opts? { start_col?: integer, plain?: boolean }
+local function set_hl_group(buf, line, str, pattern, hl_group, opts)
+  opts = opts or {}
+  local start_col = opts.start_col or 1
+  local plain = opts.plain ~= false
+  local s, e = str:find(pattern, start_col, plain)
   if s == nil then
     return
   end
@@ -156,13 +160,39 @@ local function get_help_text()
     "",
     "Play/Pause: <Space>",
     "Reset: r",
-    string.format("Decrease WPM (-%d):  %s", M.config.wpm_step_size, "<"),
-    string.format("Increase WPM (+%d):  %s", M.config.wpm_step_size, ">"),
+    string.format("Decrease WPM (-%d):  %s", M.config.wpm_step_size, M.config.keymaps.decrease_wpm),
+    string.format("Increase WPM (+%d):  %s", M.config.wpm_step_size, M.config.keymaps.increase_wpm),
     string.format("Previous step:  %s", M.config.keymaps.previous_step),
     string.format("Next step:  %s", M.config.keymaps.next_step),
     "",
     "Help: g?",
   }
+end
+
+---@param buf integer
+---@param help_text string[]
+local function highlight_help_keymaps(buf, help_text)
+  local help_keymaps = {
+    { line = 1, keys = { "q", "<Esc>" } },
+    { line = 3, keys = { "<Space>" } },
+    { line = 4, keys = { "r" } },
+    { line = 5, keys = { M.config.keymaps.decrease_wpm } },
+    { line = 6, keys = { M.config.keymaps.increase_wpm } },
+    { line = 7, keys = { M.config.keymaps.previous_step } },
+    { line = 8, keys = { M.config.keymaps.next_step } },
+    { line = 10, keys = { "g?" } },
+  }
+
+  for _, help_line in ipairs(help_keymaps) do
+    local line = help_text[help_line.line]
+    if line then
+      local _, colon_end = line:find(":%s*")
+      local start_col = colon_end and (colon_end + 1) or 1
+      for _, key in ipairs(help_line.keys) do
+        set_hl_group(buf, help_line.line - 1, line, key, HL_GROUPS.main, { start_col = start_col })
+      end
+    end
+  end
 end
 
 local function close_rsvp()
@@ -249,7 +279,7 @@ local function write_help_line()
   with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.help_line - 1, LINE_INDICES.help_line, false, { line })
   end)
-  set_hl_group(state.buf, get_abs_linenr(LINE_INDICES.help_line), line, "g%?", HL_GROUPS.main)
+  set_hl_group(state.buf, get_abs_linenr(LINE_INDICES.help_line), line, "g?", HL_GROUPS.main)
 end
 
 local function write_keymap_line()
@@ -380,6 +410,7 @@ local function render_help()
 
   local help_text = get_help_text()
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, help_text)
+  highlight_help_keymaps(bufnr, help_text)
 
   vim.bo[bufnr].modifiable = false
   vim.bo[bufnr].buftype = "nofile"
