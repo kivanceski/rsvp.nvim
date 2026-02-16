@@ -88,8 +88,8 @@ local function set_hl_group(buf, line, str, pattern, hl_group)
 end
 
 local function init_highlights()
-  vim.api.nvim_set_hl(0, "RsvpMain", { link = "@keyword" })
-  vim.api.nvim_set_hl(0, "RsvpAccent", { link = "@keyword" })
+  vim.api.nvim_set_hl(0, "RsvpMain", { link = "Keyword" })
+  vim.api.nvim_set_hl(0, "RsvpAccent", { link = "Keyword" })
   vim.api.nvim_set_hl(0, "RsvpGhostText", { link = "NonText" })
 end
 
