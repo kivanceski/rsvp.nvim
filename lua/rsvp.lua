@@ -72,8 +72,7 @@ M.config = config
 ---@param linenr integer
 ---@param buf integer?
 local function get_abs_linenr(linenr, buf)
-  local line_count = vim.api.nvim_buf_line_count(buf or state.buf)
-  return line_count + linenr
+  return vim.api.nvim_buf_line_count(buf or state.buf) + linenr
 end
 
 ---@param buf integer
@@ -83,8 +82,7 @@ end
 ---@param hl_group string
 local function set_hl_group(buf, line, str, pattern, hl_group)
   local s, e = str:find(pattern)
-  local linenr = vim.api.nvim_buf_line_count(buf) + line
-  vim.api.nvim_buf_set_extmark(buf, hl_ns, linenr, s - 1, { end_col = e, hl_group = hl_group })
+  vim.api.nvim_buf_set_extmark(buf, hl_ns, line, s - 1, { end_col = e, hl_group = hl_group })
 end
 
 local function init_highlights()
