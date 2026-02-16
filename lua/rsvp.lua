@@ -55,10 +55,12 @@ local state = vim.deepcopy(initial_state)
 ---@field auto_run boolean
 ---@field initial_wpm integer
 ---@field wpm_step_size integer
+---@field progress_bar_width integer
 local config = {
   keymaps = keymaps,
   auto_run = true,
   wpm_step_size = 25,
+  progress_bar_width = 80,
 }
 
 ---@class RsvpModule
@@ -218,14 +220,12 @@ local function write_duration_line()
 end
 
 local write_proggress_bar = function()
-  local progress_bar_width = 80
-
   local progress_ratio = state.current_index / #state.words
 
-  local progress_count = math.floor(progress_bar_width * progress_ratio)
+  local progress_count = math.floor(M.config.progress_bar_width * progress_ratio)
 
   local progress_str = string.rep("█", progress_count)
-  local unfinished_str = string.rep("▒", progress_bar_width - progress_count)
+  local unfinished_str = string.rep("▒", M.config.progress_bar_width - progress_count)
 
   local line = center_text(progress_str .. unfinished_str)
 
