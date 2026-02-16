@@ -1,47 +1,80 @@
-# A Neovim Plugin Template
+# rsvp.nvim
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ellisonleao/nvim-plugin-template/lint-test.yml?branch=main&style=for-the-badge)
 ![Lua](https://img.shields.io/badge/Made%20with%20Lua-blueviolet.svg?style=for-the-badge&logo=lua)
 
-A template repository for Neovim plugins.
+`rsvp.nvim` is a speed-reading plugin for Neovim built around RSVP (Rapid Serial Visual Presentation). It opens a focused fullscreen reader and displays one word at a time from a selected text range so you can read quickly without eye-scanning lines.
 
-## Using it
+## Features
 
-Via `gh`:
+- Read any selected range (or full buffer) one word at a time
+- Fullscreen floating RSVP reader for distraction-free reading
+- Play/pause, reset, and step backward/forward through words
+- Adjustable WPM with clamped limits (50 to 1000)
+- Live progress info (`current/total`, percentage, WPM)
+- Progress bar and completion duration
+- Built-in help popup (`g?`)
+- Configurable speed step, progress width, and keymaps
 
+## Installation
+
+Using [lazy.nvim](https://github.com/folke/lazy.nvim):
+
+```lua
+{
+  "kivanceski/rsvp.nvim",
+}
 ```
-$ gh repo create my-plugin -p ellisonleao/nvim-plugin-template
+
+Usage examples:
+
+- `:Rsvp` to read the whole file
+- `:10,40Rsvp` to read lines 10 through 40
+- Visual-select lines, then run `:Rsvp`
+
+## Configuration (all defaults shown)
+
+This example sets every option to its current default value. Keep this as a reference and override only the values you want to change.
+
+```lua
+{
+  "kivanceski/rsvp.nvim",
+  opts = {
+    auto_run = true, -- Start playback immediately after opening the RSVP window
+    initial_wpm = 300, -- Starting words-per-minute speed
+    wpm_step_size = 25, -- Amount added/removed when changing WPM
+    progress_bar_width = 80, -- Progress bar width in characters
+    keymaps = {
+      decrease_wpm = "<", -- Decrease WPM by `wpm_step_size`
+      increase_wpm = ">", -- Increase WPM by `wpm_step_size`
+      previous_step = "H", -- Move one word backward
+      next_step = "L", -- Move one word forward
+    },
+  },
+}
 ```
 
-Via github web page:
+In-window defaults that are always available:
 
-Click on `Use this template`
+- Quit: `q` or `<Esc>`
+- Play/Pause: `<Space>`
+- Reset: `r`
+- Help: `g?`
 
-![](https://docs.github.com/assets/cb-36544/images/help/repository/use-this-template-button.png)
+## User Commands
 
-## Features and structure
+| Command             | What it does                                                             |
+| ------------------- | ------------------------------------------------------------------------ |
+| `:Rsvp`             | Starts RSVP on the given range (default range is `%`, the whole buffer). |
+| `:RsvpPlay`         | Starts or resumes playback in an active RSVP session.                    |
+| `:RsvpPause`        | Pauses playback in an active RSVP session.                               |
+| `:RsvpReset`        | Restarts the current RSVP session from the beginning.                    |
+| `:RsvpDecreaseWpm`  | Decreases speed by `25` WPM.                                             |
+| `:RsvpIncreaseWpm`  | Increases speed by `25` WPM.                                             |
+| `:RsvpPreviousStep` | Moves back one word.                                                     |
+| `:RsvpNextStep`     | Moves forward one word.                                                  |
 
-- 100% Lua
-- Github actions for:
-  - running tests using [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) and [busted](https://olivinelabs.com/busted/)
-  - check for formatting errors (Stylua)
-  - vimdocs autogeneration from README.md file
-  - luarocks release (LUAROCKS_API_KEY secret configuration required)
+## Similar Plugins
 
-### Plugin structure
-
-```
-.
-├── lua
-│   ├── plugin_name
-│   │   └── module.lua
-│   └── plugin_name.lua
-├── Makefile
-├── plugin
-│   └── plugin_name.lua
-├── README.md
-├── tests
-│   ├── minimal_init.lua
-│   └── plugin_name
-│       └── plugin_name_spec.lua
-```
+- [BourgeoisBear/vim-rsvp](https://github.com/BourgeoisBear/vim-rsvp)
+- [xHugo21/rsvp.nvim](https://github.com/xHugo21/rsvp.nvim)
