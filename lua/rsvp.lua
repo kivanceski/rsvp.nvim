@@ -1,5 +1,23 @@
 local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
 
+local TIMER_SENSITIVITY = 100
+
+local hl_ns = vim.api.nvim_create_namespace("rsvp_hl")
+
+local HL_GROUPS = {
+  main = "RsvpMain",
+  accent = "RsvpAccent",
+  ghost_text = "RsvpGhostText",
+}
+
+local LINE_INDICES = {
+  status_line = 0,
+  duration_line = 3,
+  keymap_line = -1,
+  help_line = -2,
+  progress_bar = -5,
+}
+
 ---@class Keymaps
 ---@field decrease_wpm string
 ---@field increase_wpm string
@@ -49,23 +67,12 @@ local M = {}
 ---@type Config
 M.config = config
 
-local TIMER_SENSITIVITY = 100
-
-local hl_ns = vim.api.nvim_create_namespace("rsvp_hl")
-
-local HL_GROUPS = {
-  main = "RsvpMain",
-  accent = "RsvpAccent",
-  ghost_text = "RsvpGhostText",
-}
-
-local LINE_INDICES = {
-  status_line = 0,
-  duration_line = 3,
-  keymap_line = -1,
-  help_line = -2,
-  progress_bar = -5,
-}
+---@param linenr integer
+---@param buf integer?
+local function get_abs_linenr(linenr, buf)
+  local line_count = vim.api.nvim_buf_line_count(buf or state.buf)
+  return line_count + linenr
+end
 
 ---@param buf integer
 ---@param line integer
