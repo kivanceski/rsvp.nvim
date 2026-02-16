@@ -236,6 +236,9 @@ local write_proggress_bar = function()
   with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.progress_bar - 1, LINE_INDICES.progress_bar, false, { line })
   end)
+
+  set_hl_group(state.buf, get_abs_linenr(LINE_INDICES.progress_bar), line, progress_str, HL_GROUPS.main)
+  set_hl_group(state.buf, get_abs_linenr(LINE_INDICES.progress_bar), line, unfinished_str, HL_GROUPS.ghost_text)
 end
 
 local function write_help_line()
