@@ -7,6 +7,7 @@ local hl_ns = vim.api.nvim_create_namespace("rsvp_hl")
 local HL_GROUPS = {
   main = "RsvpMain",
   accent = "RsvpAccent",
+  paused = "RsvpPaused",
   ghost_text = "RsvpGhostText",
 }
 
@@ -82,12 +83,16 @@ end
 ---@param hl_group string
 local function set_hl_group(buf, line, str, pattern, hl_group)
   local s, e = str:find(pattern)
+  if s == nil then
+    return
+  end
   vim.api.nvim_buf_set_extmark(buf, hl_ns, line, s - 1, { end_col = e, hl_group = hl_group })
 end
 
 local function init_highlights()
   vim.api.nvim_set_hl(0, "RsvpMain", { link = "Keyword" })
   vim.api.nvim_set_hl(0, "RsvpAccent", { link = "Keyword" })
+  vim.api.nvim_set_hl(0, "RsvpPaused", { fg = "#FFFF00", bold = true })
   vim.api.nvim_set_hl(0, "RsvpGhostText", { link = "NonText" })
 end
 
@@ -149,14 +154,14 @@ local function get_help_text()
   return {
     "RSVP Help (Quit: q or <Esc>)",
     "",
-    "Play/Pause: <space>",
-    'Reset: "r"',
-    string.format("Decrease WPM (-%d):  %s", M.config.wpm_step_size, '"<"'),
-    string.format("Increase WPM (+%d):  %s", M.config.wpm_step_size, '">"'),
-    string.format('Previous step:  "%s"', M.config.keymaps.previous_step),
-    string.format('Next step:  "%s"', M.config.keymaps.next_step),
+    "Play/Pause: <Space>",
+    "Reset: r",
+    string.format("Decrease WPM (-%d):  %s", M.config.wpm_step_size, "<"),
+    string.format("Increase WPM (+%d):  %s", M.config.wpm_step_size, ">"),
+    string.format("Previous step:  %s", M.config.keymaps.previous_step),
+    string.format("Next step:  %s", M.config.keymaps.next_step),
     "",
-    'Help: "g?"',
+    "Help: g?",
   }
 end
 
@@ -205,6 +210,7 @@ local function write_status_line()
   with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.status_line, LINE_INDICES.status_line + 1, false, { line })
   end)
+  set_hl_group(state.buf, LINE_INDICES.status_line, line, "PAUSED", HL_GROUPS.paused)
 end
 
 local function write_duration_line()
@@ -233,37 +239,38 @@ local write_proggress_bar = function()
 end
 
 local function write_help_line()
-  local help_line = 'Help: "g?"'
+  local help_line = "Help: g?"
 
   local line = center_text(help_line)
 
   with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.help_line - 1, LINE_INDICES.help_line, false, { line })
   end)
+  set_hl_group(state.buf, get_abs_linenr(LINE_INDICES.help_line), line, "g%?", HL_GROUPS.main)
 end
 
 local function write_keymap_line()
-  local decrease_wpm = "Decrease WPM (-"
-    .. M.config.wpm_step_size
-    .. "): "
-    .. '"'
-    .. M.config.keymaps.decrease_wpm
-    .. '"'
+  local decrease_wpm = "Decrease WPM (-" .. M.config.wpm_step_size .. "): " .. M.config.keymaps.decrease_wpm
 
-  local increase_wpm = "Increase WPM (+"
-    .. M.config.wpm_step_size
-    .. "): "
-    .. '"'
-    .. M.config.keymaps.increase_wpm
-    .. '"'
+  local increase_wpm = "Increase WPM (+" .. M.config.wpm_step_size .. "): " .. M.config.keymaps.increase_wpm
 
-  local keymap_line = string.format("%s | PLAY/PAUSE: <space> | %s", decrease_wpm, increase_wpm)
+  local keymap_line = string.format("%s | PLAY/PAUSE: <Space> | %s", decrease_wpm, increase_wpm)
 
   local line = center_text(keymap_line)
 
   with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.keymap_line - 1, LINE_INDICES.keymap_line, false, { line })
   end)
+
+  set_hl_group(state.buf, get_abs_linenr(LINE_INDICES.keymap_line), line, M.config.keymaps.decrease_wpm, HL_GROUPS.main)
+  set_hl_group(state.buf, get_abs_linenr(LINE_INDICES.keymap_line), line, "<Space>", HL_GROUPS.main)
+  set_hl_group(
+    state.buf,
+    get_abs_linenr(LINE_INDICES.keymap_line),
+    line,
+    string.format(" %s", M.config.keymaps.increase_wpm),
+    HL_GROUPS.main
+  )
 end
 
 M.play = function()
@@ -399,6 +406,7 @@ local function render_help()
 end
 
 local function render()
+  vim.api.nvim_buf_clear_namespace(state.buf, hl_ns, 0, -1)
   write_status_line()
   write_keymap_line()
   write_help_line()
@@ -446,6 +454,8 @@ local function create_floating_window()
 end
 
 local function init_rsvp_window()
+  init_highlights()
+
   if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
     return
   end
@@ -453,7 +463,7 @@ local function init_rsvp_window()
   local win_state = create_floating_window()
   state = vim.tbl_deep_extend("force", state, win_state)
 
-  vim.keymap.set("n", "<space>", M.toggle, { buffer = state.buf, nowait = true, silent = true })
+  vim.keymap.set("n", "<Space>", M.toggle, { buffer = state.buf, nowait = true, silent = true })
   vim.keymap.set("n", "r", M.reset, { buffer = state.buf, nowait = true, silent = true })
   vim.keymap.set("n", M.config.keymaps.decrease_wpm, function()
     M.adjust_wpm(-M.config.wpm_step_size)
