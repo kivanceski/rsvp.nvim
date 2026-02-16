@@ -64,7 +64,7 @@ local LINE_INDICES = {
   duration_line = 3,
   keymap_line = -1,
   help_line = -2,
-  progress_bar = -7,
+  progress_bar = -5,
 }
 
 ---@param buf integer
@@ -223,7 +223,7 @@ local write_proggress_bar = function()
   local line = center_text(progress_str .. unfinished_str)
 
   with_buffer_mutation(state.buf, function()
-    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.progress_bar, LINE_INDICES.progress_bar + 1, false, { line })
+    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.progress_bar - 1, LINE_INDICES.progress_bar, false, { line })
   end)
 end
 
@@ -233,7 +233,7 @@ local function write_help_line()
   local line = center_text(help_line)
 
   with_buffer_mutation(state.buf, function()
-    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.help_line, LINE_INDICES.help_line, false, { line })
+    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.help_line - 1, LINE_INDICES.help_line, false, { line })
   end)
 end
 
@@ -257,7 +257,7 @@ local function write_keymap_line()
   local line = center_text(keymap_line)
 
   with_buffer_mutation(state.buf, function()
-    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.keymap_line, LINE_INDICES.keymap_line, false, { line })
+    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.keymap_line - 1, LINE_INDICES.keymap_line, false, { line })
   end)
 end
 
