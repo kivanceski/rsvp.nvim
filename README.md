@@ -50,9 +50,26 @@ This example sets every option to its current default value. Keep this as a refe
       previous_step = "H", -- Move one word backward
       next_step = "L", -- Move one word forward
     },
+    colors = {
+      main = {
+        link = "Keyword", -- Any `nvim_set_hl()` option is supported
+      },
+      accent = {
+        link = "Keyword",
+      },
+      paused = {
+        fg = "#FFFF00",
+        bold = true,
+      },
+      ghost_text = {
+        link = "NonText",
+      },
+    },
   },
 }
 ```
+
+`opts.colors.<group>` accepts the full `vim.api.nvim_set_hl()` option table.
 
 In-window defaults that are always available:
 
@@ -73,6 +90,15 @@ In-window defaults that are always available:
 | `:RsvpIncreaseWpm`  | Increases speed by `25` WPM.                                             |
 | `:RsvpPreviousStep` | Moves back one word.                                                     |
 | `:RsvpNextStep`     | Moves forward one word.                                                  |
+
+## Highlight Groups
+
+| Highlight Group | Used in                                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `RsvpMain`      | Key hints in the help popup, keymap hints in the status line, `g?` in the help hint line, and the completed part of the progress bar. |
+| `RsvpAccent`    | Reserved for accent styling (defined by default, not currently applied in rendered text).                                             |
+| `RsvpPaused`    | `PAUSED` marker in the top status line when playback is paused.                                                                       |
+| `RsvpGhostText` | Unfinished part of the progress bar.                                                                                                  |
 
 ## Similar Plugins
 

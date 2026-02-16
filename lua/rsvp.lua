@@ -11,6 +11,13 @@ local HL_GROUPS = {
   ghost_text = "RsvpGhostText",
 }
 
+local default_highlights = {
+  main = { link = "Keyword" },
+  accent = { link = "Keyword" },
+  paused = { fg = "#FFFF00", bold = true },
+  ghost_text = { link = "NonText" },
+}
+
 local LINE_INDICES = {
   status_line = 0,
   duration_line = 3,
@@ -51,17 +58,28 @@ local initial_state = {
 ---@type State
 local state = vim.deepcopy(initial_state)
 
+---@alias RsvpHighlightOpts vim.api.keyset.highlight
+
+---@class RsvpColors
+---@field main? RsvpHighlightOpts
+---@field accent? RsvpHighlightOpts
+---@field paused? RsvpHighlightOpts
+---@field ghost_text? RsvpHighlightOpts
+
 ---@class Config
 ---@field keymaps Keymaps
 ---@field auto_run boolean
 ---@field initial_wpm integer
 ---@field wpm_step_size integer
 ---@field progress_bar_width integer
+---@field colors RsvpColors
 local config = {
   keymaps = keymaps,
   auto_run = true,
+  initial_wpm = 300,
   wpm_step_size = 25,
   progress_bar_width = 80,
+  colors = {},
 }
 
 ---@class RsvpModule
@@ -94,10 +112,20 @@ local function set_hl_group(buf, line, str, pattern, hl_group, opts)
 end
 
 local function init_highlights()
-  vim.api.nvim_set_hl(0, "RsvpMain", { link = "Keyword" })
-  vim.api.nvim_set_hl(0, "RsvpAccent", { link = "Keyword" })
-  vim.api.nvim_set_hl(0, "RsvpPaused", { fg = "#FFFF00", bold = true })
-  vim.api.nvim_set_hl(0, "RsvpGhostText", { link = "NonText" })
+  for color_name, hl_group in pairs(HL_GROUPS) do
+    local hl_spec = vim.deepcopy(default_highlights[color_name])
+    local color_override = M.config.colors[color_name] or {}
+
+    if next(color_override) ~= nil then
+      local has_link = color_override.link ~= nil
+      if not has_link then
+        hl_spec.link = nil
+      end
+      hl_spec = vim.tbl_deep_extend("force", hl_spec, color_override)
+    end
+
+    vim.api.nvim_set_hl(0, hl_group, hl_spec)
+  end
 end
 
 ---@param args Config?
