@@ -1,4 +1,5 @@
-local ALLOWED_CHARACTERS = "A-Za-z0-9%-%(%).'’"
+---@class RsvpModule
+local M = {}
 
 local TIMER_SENSITIVITY = 100
 
@@ -81,9 +82,6 @@ local config = {
   progress_bar_width = 80,
   colors = {},
 }
-
----@class RsvpModule
-local M = {}
 
 ---@type Config
 M.config = config
@@ -241,13 +239,80 @@ local function center_text(text)
 end
 
 ---@param word string
+---@return integer
+local function get_orp_char_index(word)
+  local char_count = vim.fn.strchars(word)
+  if char_count == 0 then
+    return 1
+  end
+
+  local alnum_positions = {}
+  for i = 1, char_count do
+    local char = vim.fn.strcharpart(word, i - 1, 1)
+    if char:match("[%w]") then
+      table.insert(alnum_positions, i)
+    end
+  end
+
+  local alnum_count = #alnum_positions
+  if alnum_count == 0 then
+    return 1
+  end
+
+  local core_orp_index
+  if alnum_count <= 1 then
+    core_orp_index = 1
+  elseif alnum_count <= 5 then
+    core_orp_index = 2
+  elseif alnum_count <= 9 then
+    core_orp_index = 3
+  elseif alnum_count <= 13 then
+    core_orp_index = 4
+  else
+    core_orp_index = 5
+  end
+
+  core_orp_index = math.max(1, math.min(core_orp_index, alnum_count))
+
+  return alnum_positions[core_orp_index]
+end
+
+---@param word string
+---@return string line
+---@return integer orp_col_start
+---@return integer orp_col_end
+local function build_orp_line(word)
+  local win_width = vim.api.nvim_win_get_width(state.win or 0)
+  local orp_char_index = get_orp_char_index(word)
+
+  local prefix = vim.fn.strcharpart(word, 0, orp_char_index - 1)
+  local prefix_width = vim.fn.strdisplaywidth(prefix)
+  local center_col = math.floor((win_width - 1) / 2)
+  local start_col = math.max(0, center_col - prefix_width)
+
+  local line = string.rep(" ", start_col) .. word
+
+  local orp_byte_start = start_col + vim.str_byteindex(word, "utf-32", orp_char_index - 1)
+  local orp_char = vim.fn.strcharpart(word, orp_char_index - 1, 1)
+  local orp_byte_end = orp_byte_start + math.max(1, #orp_char)
+
+  return line, orp_byte_start, orp_byte_end
+end
+
+---@param word string
 local function write_word(word)
   local line_number = math.floor(vim.o.lines / 2)
-  local line = center_text(word)
+  local line, orp_col_start, orp_col_end = build_orp_line(word)
 
   with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, line_number, line_number + 1, false, { line })
   end)
+
+  vim.api.nvim_buf_clear_namespace(state.buf, hl_ns, line_number, line_number + 1)
+  vim.api.nvim_buf_set_extmark(state.buf, hl_ns, line_number, orp_col_start, {
+    end_col = orp_col_end,
+    hl_group = HL_GROUPS.accent,
+  })
 end
 
 local function write_status_line()
@@ -596,9 +661,10 @@ M.rsvp = function(opts)
   local full_content_str = table.concat(full_content, " ")
 
   local words = {}
-  for word in full_content_str:gmatch("%w+") do
-    if word:match("%a") and word:match("^[" .. ALLOWED_CHARACTERS .. "]+$") then
-      table.insert(words, word)
+  for token in full_content_str:gmatch("%S+") do
+    local core = token:gsub("^[^%w]+", ""):gsub("[^%w]+$", "")
+    if core:match("%a") then
+      table.insert(words, token)
     end
   end
 

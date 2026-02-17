@@ -8,6 +8,7 @@
 ## Features
 
 - Read any selected range (or full buffer) one word at a time
+- Optimal Recognition Point (ORP)-centered rendering with accented focus character (`RsvpAccent`)
 - Fullscreen floating RSVP reader for distraction-free reading
 - Play/pause, reset, and step backward/forward through words
 - Adjustable WPM with clamped limits (50 to 1000)
@@ -15,6 +16,18 @@
 - Progress bar and completion duration
 - Built-in help popup (`g?`)
 - Configurable speed step, progress width, and keymaps
+
+## Optimal Recognition Point (ORP) Selection Logic
+
+`rsvp.nvim` uses a Spritz-style stepped Optimal Recognition Point (ORP) mapping based on the word's alphanumeric length (surrounding punctuation is ignored):
+
+| Alphanumeric word length | Optimal Recognition Point (ORP) character index (1-based) |
+| ------------------------ | --------------------------------------------------------- |
+| 1                        | 1                                                         |
+| 2-5                      | 2                                                         |
+| 6-9                      | 3                                                         |
+| 10-13                    | 4                                                         |
+| 14+                      | 5                                                         |
 
 ## Installation
 
@@ -96,7 +109,7 @@ In-window defaults that are always available:
 | Highlight Group | Used in                                                                                                                               |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `RsvpMain`      | Key hints in the help popup, keymap hints in the status line, `g?` in the help hint line, and the completed part of the progress bar. |
-| `RsvpAccent`    | Reserved for accent styling (defined by default, not currently applied in rendered text).                                             |
+| `RsvpAccent`    | The ORP (Optimal Recognition Point) character of the active word.                                                                     |
 | `RsvpPaused`    | `PAUSED` marker in the top status line when playback is paused.                                                                       |
 | `RsvpGhostText` | Unfinished part of the progress bar.                                                                                                  |
 
