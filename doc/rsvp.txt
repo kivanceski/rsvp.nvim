@@ -116,15 +116,14 @@ reference and override only the values you want to change.
 
 `opts.colors.<group>` accepts the full `vim.api.nvim_set_hl()` option table.
 
-`surrounding_word_count` controls how many neighboring words are rendered around
-the active word.
-Examples:
+`surrounding_word_count` controls how many neighboring words are rendered
+around the active word. Examples:
+
 - `0`: only active word
 - `1`: one word on the left and one on the right (when available)
 - `3`: up to three words on each side (max supported)
 
-Invalid values (non-numeric, negative, or greater than `3`) are treated as
-`1`.
+Invalid values (non-numeric, negative, or greater than `3`) are treated as `1`.
 
 In-window defaults that are always available:
 
@@ -171,8 +170,8 @@ HIGHLIGHT GROUPS                             *rsvp-rsvp.nvim-highlight-groups*
 
   RsvpPaused      PAUSED marker in the top status line when playback is paused.
 
-  RsvpGhostText   Unfinished part of the progress bar and surrounding words
-                  (when surrounding_word_count > 0).
+  RsvpGhostText   Unfinished part of the progress bar and surrounding words (when
+                  surrounding_word_count > 0).
   -------------------------------------------------------------------------------
 
 SIMILAR PLUGINS                               *rsvp-rsvp.nvim-similar-plugins*
