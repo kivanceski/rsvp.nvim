@@ -32,6 +32,24 @@ local function find_line_with(buf, token)
   error(string.format("could not find token '%s' in RSVP window", token))
 end
 
+local function line_contains(buf, token)
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
+    if line:find(token, 1, true) then
+      return true
+    end
+  end
+
+  return false
+end
+
+local function get_progress_counts(buf)
+  local _, line = find_line_with(buf, "▒")
+  local bar = vim.trim(line)
+  local _, completed = bar:gsub("█", "")
+  local _, unfinished = bar:gsub("▒", "")
+  return completed, unfinished
+end
+
 local function get_line_extmark_texts(buf, line_idx, hl_group)
   local ns = vim.api.nvim_get_namespaces().rsvp_hl
   assert(ns ~= nil, "rsvp_hl namespace should exist")
@@ -104,13 +122,13 @@ describe("rsvp ORP highlighting", function()
     local rsvp = require("rsvp")
     open_rsvp_session({ "alpha beta gamma delta epsilon" }, { surrounding_word_count = 1 })
 
-    -- initial word is index 1; step once to display index 3 (gamma) with both sides
+    -- initial word is index 1; step once to display index 2 (beta) with both sides
     rsvp.set_step(1)
 
     local buf = vim.api.nvim_get_current_buf()
-    local line_idx, line = find_line_with(buf, "gamma")
-    assert.is_truthy(line:find("beta gamma delta", 1, true))
-    assert.same({ "beta", "delta" }, get_line_extmark_texts(buf, line_idx, "RsvpGhostText"))
+    local line_idx, line = find_line_with(buf, "beta")
+    assert.is_truthy(line:find("alpha beta gamma", 1, true))
+    assert.same({ "alpha", "gamma" }, get_line_extmark_texts(buf, line_idx, "RsvpGhostText"))
   end)
 
   it("does not add extra words near boundaries", function()
@@ -137,5 +155,58 @@ describe("rsvp ORP highlighting", function()
     local line_idx, line = find_line_with(buf, "one")
     assert.are.equal("one two", vim.trim(line))
     assert.same({ "two" }, get_line_extmark_texts(buf, line_idx, "RsvpGhostText"))
+  end)
+end)
+
+describe("rsvp step navigation", function()
+  before_each(function()
+    package.loaded.rsvp = nil
+    setup_rsvp()
+  end)
+
+  after_each(function()
+    close_floating_windows()
+  end)
+
+  it("moves one word and updates status/progress on next step", function()
+    local rsvp = require("rsvp")
+    open_rsvp_session({ "alpha beta gamma delta" })
+
+    rsvp.set_step(1)
+
+    local buf = vim.api.nvim_get_current_buf()
+    local _, status_line = find_line_with(buf, "2/4")
+    assert.is_truthy(status_line:find("50%", 1, true))
+    find_line_with(buf, "beta")
+
+    local completed, unfinished = get_progress_counts(buf)
+    assert.are.equal(40, completed)
+    assert.are.equal(40, unfinished)
+  end)
+
+  it("clears DONE line and rewinds progress when stepping back after finish", function()
+    local rsvp = require("rsvp")
+    open_rsvp_session({ "one two" })
+    rsvp.play()
+
+    local reached_done = vim.wait(2000, function()
+      local buf = vim.api.nvim_get_current_buf()
+      return line_contains(buf, "DONE in")
+    end, 20)
+
+    assert.is_true(reached_done)
+
+    local buf = vim.api.nvim_get_current_buf()
+    assert.is_true(line_contains(buf, "DONE in"))
+
+    rsvp.set_step(-1)
+
+    assert.is_false(line_contains(buf, "DONE in"))
+    local _, status_line = find_line_with(buf, "1/2")
+    assert.is_truthy(status_line:find("50%", 1, true))
+
+    local completed, unfinished = get_progress_counts(buf)
+    assert.are.equal(40, completed)
+    assert.are.equal(40, unfinished)
   end)
 end)

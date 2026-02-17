@@ -390,10 +390,14 @@ local function write_word(word_index)
   end
 end
 
-local function write_status_line()
-  local progress_str = string.format("%d/%d", state.current_index, #state.words)
+---@param word_index? integer
+local function write_status_line(word_index)
+  local word_count = #state.words
+  local current_word_index = math.max(1, math.min(word_count, word_index or state.current_index))
+
+  local progress_str = string.format("%d/%d", current_word_index, word_count)
   local wpm_str = string.format("WPM: %d", state.wpm)
-  local progress_percentage = math.floor(state.current_index / #state.words * 100)
+  local progress_percentage = math.floor(current_word_index / word_count * 100)
   local progress_percentage_str = string.format("%d%%", progress_percentage)
   local paused_text = not state.running and "[PAUSED]" or ""
 
@@ -421,8 +425,22 @@ local function write_duration_line()
   end)
 end
 
-local write_proggress_bar = function()
-  local progress_ratio = state.current_index / #state.words
+local function clear_duration_line()
+  with_buffer_mutation(state.buf, function()
+    vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.duration_line, LINE_INDICES.duration_line + 1, false, { "" })
+  end)
+end
+
+---@return integer
+local function get_current_word_index()
+  return math.max(1, math.min(#state.words, state.current_index - 1))
+end
+
+---@param word_index? integer
+local write_proggress_bar = function(word_index)
+  local word_count = #state.words
+  local current_word_index = math.max(0, math.min(word_count, word_index or state.current_index))
+  local progress_ratio = current_word_index / word_count
 
   local progress_count = math.floor(M.config.progress_bar_width * progress_ratio)
 
@@ -523,8 +541,8 @@ M.play = function()
       end
 
       write_word(state.current_index)
-      write_status_line()
-      write_proggress_bar()
+      write_status_line(state.current_index)
+      write_proggress_bar(state.current_index)
 
       state.current_index = state.current_index + 1
       vim.cmd("redraw")
@@ -540,18 +558,25 @@ M.pause = function()
   state.duration_timer:stop()
   state.running = false
   clear_timer()
-  write_status_line()
+  write_status_line(get_current_word_index())
 end
 
 ---@param relative_step integer
 M.set_step = function(relative_step)
-  if state.current_index + relative_step > #state.words or state.current_index + relative_step < 1 then
+  local current_word_index = get_current_word_index()
+  local target_word_index = current_word_index + relative_step
+
+  if target_word_index > #state.words or target_word_index < 1 then
     return
   end
+
   M.pause()
-  state.current_index = state.current_index + relative_step
-  write_word(state.current_index)
-  write_status_line()
+  state.current_index = target_word_index + 1
+  state.finished = false
+  clear_duration_line()
+  write_word(target_word_index)
+  write_status_line(target_word_index)
+  write_proggress_bar(target_word_index)
 end
 
 M.toggle = function()
@@ -630,6 +655,8 @@ local function start_session()
     M.play()
   else
     write_word(state.current_index)
+    write_status_line(state.current_index)
+    write_proggress_bar(state.current_index)
     state.current_index = state.current_index + 1
   end
 end
