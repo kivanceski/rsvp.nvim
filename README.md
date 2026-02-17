@@ -14,7 +14,7 @@
 - Adjustable WPM with clamped limits (50 to 1000)
 - Live progress info (`current/total`, percentage, WPM)
 - Optional surrounding-word context (`0..3` words on each side)
-- Progress bar and completion duration
+- Progress bar and completion elapsed time
 - Built-in help popup (`g?`)
 - Configurable speed step, progress width, and keymaps
 
@@ -126,7 +126,7 @@ In-window defaults that are always available:
 | `RsvpMain`      | Key hints in the help popup, keymap hints in the status line, `g?` in the help hint line, and the completed part of the progress bar. |
 | `RsvpAccent`    | The ORP (Optimal Recognition Point) character of the active word.                                                                     |
 | `RsvpPaused`    | `PAUSED` marker in the top status line when playback is paused.                                                                       |
-| `RsvpDone`      | `DONE` marker in the duration line shown after playback finishes.                                                                      |
+| `RsvpDone`      | `DONE` marker in the elapsed-time line shown after playback finishes.                                                                  |
 | `RsvpGhostText` | Unfinished part of the progress bar and surrounding words (when `surrounding_word_count > 0`).                                        |
 
 ## Similar Plugins
