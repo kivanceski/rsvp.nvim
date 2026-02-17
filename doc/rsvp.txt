@@ -1,70 +1,177 @@
-*my-template-docs.txt*     For Neovim >= 0.8.0    Last change: 2025 October 08
+*rsvp.txt*          For Neovim >= 0.8.0          Last change: 2026 February 17
 
 ==============================================================================
-Table of Contents                         *my-template-docs-table-of-contents*
+Table of Contents                                     *rsvp-table-of-contents*
 
-1. A Neovim Plugin Template        |my-template-docs-a-neovim-plugin-template|
-  - Using it              |my-template-docs-a-neovim-plugin-template-using-it|
-  - Features and structure|my-template-docs-a-neovim-plugin-template-features-and-structure|
-2. Links                                              |my-template-docs-links|
+1. rsvp.nvim                                                  |rsvp-rsvp.nvim|
+  - Features                                         |rsvp-rsvp.nvim-features|
+  - Optimal Recognition Point (ORP) Selection Logic|rsvp-rsvp.nvim-optimal-recognition-point-(orp)-selection-logic|
+  - Installation                                 |rsvp-rsvp.nvim-installation|
+  - Configuration (all defaults shown)|rsvp-rsvp.nvim-configuration-(all-defaults-shown)|
+  - User Commands                               |rsvp-rsvp.nvim-user-commands|
+  - Highlight Groups                         |rsvp-rsvp.nvim-highlight-groups|
+  - Similar Plugins                           |rsvp-rsvp.nvim-similar-plugins|
+2. Links                                                          |rsvp-links|
 
 ==============================================================================
-1. A Neovim Plugin Template        *my-template-docs-a-neovim-plugin-template*
+1. rsvp.nvim                                                  *rsvp-rsvp.nvim*
 
 
 
-A template repository for Neovim plugins.
+`rsvp.nvim` is a speed-reading plugin for Neovim built around RSVP (Rapid
+Serial Visual Presentation). It opens a focused fullscreen reader and displays
+one word at a time from a selected text range so you can read quickly without
+eye-scanning lines.
 
 
-USING IT                  *my-template-docs-a-neovim-plugin-template-using-it*
+FEATURES                                             *rsvp-rsvp.nvim-features*
 
-Via `gh`:
+- Read any selected range (or full buffer) one word at a time
+- Optimal Recognition Point (ORP)-centered rendering with accented focus character (`RsvpAccent`)
+- Fullscreen floating RSVP reader for distraction-free reading
+- Play/pause, reset, and step backward/forward through words
+- Adjustable WPM with clamped limits (50 to 1000)
+- Live progress info (`current/total`, percentage, WPM)
+- Progress bar and completion duration
+- Built-in help popup (`g?`)
+- Configurable speed step, progress width, and keymaps
 
->
-    $ gh repo create my-plugin -p ellisonleao/nvim-plugin-template
+
+OPTIMAL RECOGNITION POINT (ORP) SELECTION LOGIC*rsvp-rsvp.nvim-optimal-recognition-point-(orp)-selection-logic*
+
+`rsvp.nvim` uses a Spritz-style stepped Optimal Recognition Point (ORP) mapping
+based on the word’s alphanumeric length (surrounding punctuation is ignored):
+
+  -----------------------------------------------------------------------
+  Alphanumeric word     Optimal Recognition Point (ORP) character index
+  length                (1-based)
+  --------------------- -------------------------------------------------
+  1                     1
+
+  2-5                   2
+
+  6-9                   3
+
+  10-13                 4
+
+  14+                   5
+  -----------------------------------------------------------------------
+
+INSTALLATION                                     *rsvp-rsvp.nvim-installation*
+
+Using lazy.nvim <https://github.com/folke/lazy.nvim>:
+
+>lua
+    {
+      "kivanceski/rsvp.nvim",
+    }
 <
 
-Via github web page:
+Usage examples:
 
-Click on `Use this template`
-
-
-
-
-FEATURES AND STRUCTURE*my-template-docs-a-neovim-plugin-template-features-and-structure*
-
-- 100% Lua
-- Github actions for:
-    - running tests using plenary.nvim <https://github.com/nvim-lua/plenary.nvim> and busted <https://olivinelabs.com/busted/>
-    - check for formatting errors (Stylua)
-    - vimdocs autogeneration from README.md file
-    - luarocks release (LUAROCKS_API_KEY secret configuration required)
+- `:Rsvp` to read the whole file
+- `:10,40Rsvp` to read lines 10 through 40
+- Visual-select lines, then run `:Rsvp`
 
 
-PLUGIN STRUCTURE ~
+CONFIGURATION (ALL DEFAULTS SHOWN)*rsvp-rsvp.nvim-configuration-(all-defaults-shown)*
 
->
-    .
-    ├── lua
-    │   ├── plugin_name
-    │   │   └── module.lua
-    │   └── plugin_name.lua
-    ├── Makefile
-    ├── plugin
-    │   └── plugin_name.lua
-    ├── README.md
-    ├── tests
-    │   ├── minimal_init.lua
-    │   └── plugin_name
-    │       └── plugin_name_spec.lua
+This example sets every option to its current default value. Keep this as a
+reference and override only the values you want to change.
+
+>lua
+    {
+      "kivanceski/rsvp.nvim",
+      opts = {
+        auto_run = true, -- Start playback immediately after opening the RSVP window
+        initial_wpm = 300, -- Starting words-per-minute speed
+        wpm_step_size = 25, -- Amount added/removed when changing WPM
+        progress_bar_width = 80, -- Progress bar width in characters
+        keymaps = {
+          decrease_wpm = "<", -- Decrease WPM by `wpm_step_size`
+          increase_wpm = ">", -- Increase WPM by `wpm_step_size`
+          previous_step = "H", -- Move one word backward
+          next_step = "L", -- Move one word forward
+        },
+        colors = {
+          main = {
+            link = "Keyword", -- Any `nvim_set_hl()` option is supported
+          },
+          accent = {
+            link = "ErrorMsg",
+          },
+          paused = {
+            fg = "#FFFF00",
+            bold = true,
+          },
+          ghost_text = {
+            link = "NonText",
+          },
+        },
+      },
+    }
 <
 
+`opts.colors.<group>` accepts the full `vim.api.nvim_set_hl()` option table.
+
+In-window defaults that are always available:
+
+- Quit: `q` or `<Esc>`
+- Play/Pause: `<Space>`
+- Reset: `r`
+- Help: `g?`
+
+
+USER COMMANDS                                   *rsvp-rsvp.nvim-user-commands*
+
+  ----------------------------------------------------------------------------
+  Command             What it does
+  ------------------- --------------------------------------------------------
+  :Rsvp               Starts RSVP on the given range (default range is %, the
+                      whole buffer).
+
+  :RsvpPlay           Starts or resumes playback in an active RSVP session.
+
+  :RsvpPause          Pauses playback in an active RSVP session.
+
+  :RsvpReset          Restarts the current RSVP session from the beginning.
+
+  :RsvpDecreaseWpm    Decreases speed by 25 WPM.
+
+  :RsvpIncreaseWpm    Increases speed by 25 WPM.
+
+  :RsvpPreviousStep   Moves back one word.
+
+  :RsvpNextStep       Moves forward one word.
+  ----------------------------------------------------------------------------
+
+HIGHLIGHT GROUPS                             *rsvp-rsvp.nvim-highlight-groups*
+
+  -------------------------------------------------------------------------------
+  Highlight Group Used in
+  --------------- ---------------------------------------------------------------
+  RsvpMain        Key hints in the help popup, keymap hints in the status line,
+                  g? in the help hint line, and the completed part of the
+                  progress bar.
+
+  RsvpAccent      The ORP (Optimal Recognition Point) character of the active
+                  word.
+
+  RsvpPaused      PAUSED marker in the top status line when playback is paused.
+
+  RsvpGhostText   Unfinished part of the progress bar.
+  -------------------------------------------------------------------------------
+
+SIMILAR PLUGINS                               *rsvp-rsvp.nvim-similar-plugins*
+
+- BourgeoisBear/vim-rsvp <https://github.com/BourgeoisBear/vim-rsvp>
+- xHugo21/rsvp.nvim <https://github.com/xHugo21/rsvp.nvim>
+
 ==============================================================================
-2. Links                                              *my-template-docs-links*
+2. Links                                                          *rsvp-links*
 
 1. *GitHub Workflow Status*: https://img.shields.io/github/actions/workflow/status/ellisonleao/nvim-plugin-template/lint-test.yml?branch=main&style=for-the-badge
 2. *Lua*: https://img.shields.io/badge/Made%20with%20Lua-blueviolet.svg?style=for-the-badge&logo=lua
-3. **: https://docs.github.com/assets/cb-36544/images/help/repository/use-this-template-button.png
 
 Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
 
