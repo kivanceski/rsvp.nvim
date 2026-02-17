@@ -13,6 +13,7 @@
 - Play/pause, reset, and step backward/forward through words
 - Adjustable WPM with clamped limits (50 to 1000)
 - Live progress info (`current/total`, percentage, WPM)
+- Optional surrounding-word context (`0..3` words on each side)
 - Progress bar and completion duration
 - Built-in help popup (`g?`)
 - Configurable speed step, progress width, and keymaps
@@ -57,6 +58,7 @@ This example sets every option to its current default value. Keep this as a refe
     initial_wpm = 300, -- Starting words-per-minute speed
     wpm_step_size = 25, -- Amount added/removed when changing WPM
     progress_bar_width = 80, -- Progress bar width in characters
+    surrounding_word_count = 1, -- Show up to N words on each side of the active word (0..3, invalid => 1)
     keymaps = {
       decrease_wpm = "<", -- Decrease WPM by `wpm_step_size`
       increase_wpm = ">", -- Increase WPM by `wpm_step_size`
@@ -83,6 +85,15 @@ This example sets every option to its current default value. Keep this as a refe
 ```
 
 `opts.colors.<group>` accepts the full `vim.api.nvim_set_hl()` option table.
+
+`surrounding_word_count` controls how many neighboring words are rendered around the active word.  
+Examples:
+
+- `0`: only active word
+- `1`: one word on the left and one on the right (when available)
+- `3`: up to three words on each side (max supported)
+
+Invalid values (non-numeric, negative, or greater than `3`) are treated as `1`.
 
 In-window defaults that are always available:
 
@@ -111,7 +122,7 @@ In-window defaults that are always available:
 | `RsvpMain`      | Key hints in the help popup, keymap hints in the status line, `g?` in the help hint line, and the completed part of the progress bar. |
 | `RsvpAccent`    | The ORP (Optimal Recognition Point) character of the active word.                                                                     |
 | `RsvpPaused`    | `PAUSED` marker in the top status line when playback is paused.                                                                       |
-| `RsvpGhostText` | Unfinished part of the progress bar.                                                                                                  |
+| `RsvpGhostText` | Unfinished part of the progress bar and surrounding words (when `surrounding_word_count > 0`).                                        |
 
 ## Similar Plugins
 

@@ -73,6 +73,7 @@ local state = vim.deepcopy(initial_state)
 ---@field initial_wpm integer
 ---@field wpm_step_size integer
 ---@field progress_bar_width integer
+---@field surrounding_word_count integer
 ---@field colors RsvpColors
 local config = {
   keymaps = keymaps,
@@ -80,6 +81,7 @@ local config = {
   initial_wpm = 300,
   wpm_step_size = 25,
   progress_bar_width = 80,
+  surrounding_word_count = 1,
   colors = {},
 }
 
@@ -126,11 +128,31 @@ local function init_highlights()
   end
 end
 
+---@param value any
+---@return integer
+local function sanitize_surrounding_word_count(value)
+  local count = tonumber(value)
+  if count == nil then
+    return 1
+  end
+
+  if count % 1 ~= 0 then
+    return 1
+  end
+
+  if count < 0 or count > 3 then
+    return 1
+  end
+
+  return math.floor(count)
+end
+
 ---@param args Config?
 -- you can define your setup function here. Usually configurations can be merged, accepting outside params and
 -- you can also put some validation here for those.
 M.setup = function(args)
   M.config = vim.tbl_deep_extend("force", M.config, args or {})
+  M.config.surrounding_word_count = sanitize_surrounding_word_count(M.config.surrounding_word_count)
   state.wpm = M.config.initial_wpm
   init_highlights()
 end
@@ -277,32 +299,76 @@ local function get_orp_char_index(word)
   return alnum_positions[core_orp_index]
 end
 
----@param word string
+---@param word_index integer
 ---@return string line
 ---@return integer orp_col_start
 ---@return integer orp_col_end
-local function build_orp_line(word)
+---@return { start_col: integer, end_col: integer }[] ghost_ranges
+local function build_orp_line(word_index)
+  local word = state.words[word_index]
   local win_width = vim.api.nvim_win_get_width(state.win or 0)
-  local orp_char_index = get_orp_char_index(word)
+  local surrounding_word_count = sanitize_surrounding_word_count(M.config.surrounding_word_count)
 
-  local prefix = vim.fn.strcharpart(word, 0, orp_char_index - 1)
+  local words_start_index = math.max(1, word_index - surrounding_word_count)
+  local words_end_index = math.min(#state.words, word_index + surrounding_word_count)
+
+  local displayed_word_segments = {}
+  local surrounding_word_char_ranges = {}
+  local current_word_start_char_index = 0
+  local char_cursor = 0
+
+  for i = words_start_index, words_end_index do
+    local token = state.words[i]
+
+    if #displayed_word_segments > 0 then
+      table.insert(displayed_word_segments, " ")
+      char_cursor = char_cursor + 1
+    end
+
+    local token_start_char_index = char_cursor
+    local token_char_count = vim.fn.strchars(token)
+    table.insert(displayed_word_segments, token)
+    char_cursor = char_cursor + token_char_count
+
+    if i == word_index then
+      current_word_start_char_index = token_start_char_index
+    else
+      table.insert(surrounding_word_char_ranges, {
+        start_char_index = token_start_char_index,
+        end_char_index = token_start_char_index + token_char_count,
+      })
+    end
+  end
+
+  local displayed_words = table.concat(displayed_word_segments, "")
+  local orp_char_index = get_orp_char_index(word)
+  local displayed_orp_char_index = current_word_start_char_index + (orp_char_index - 1)
+  local prefix = vim.fn.strcharpart(displayed_words, 0, displayed_orp_char_index)
   local prefix_width = vim.fn.strdisplaywidth(prefix)
   local center_col = math.floor((win_width - 1) / 2)
   local start_col = math.max(0, center_col - prefix_width)
 
-  local line = string.rep(" ", start_col) .. word
+  local line = string.rep(" ", start_col) .. displayed_words
 
-  local orp_byte_start = start_col + vim.str_byteindex(word, "utf-32", orp_char_index - 1)
+  local orp_byte_start = start_col + vim.str_byteindex(displayed_words, "utf-32", displayed_orp_char_index)
   local orp_char = vim.fn.strcharpart(word, orp_char_index - 1, 1)
   local orp_byte_end = orp_byte_start + math.max(1, #orp_char)
 
-  return line, orp_byte_start, orp_byte_end
+  local ghost_ranges = {}
+  for _, char_range in ipairs(surrounding_word_char_ranges) do
+    table.insert(ghost_ranges, {
+      start_col = start_col + vim.str_byteindex(displayed_words, "utf-32", char_range.start_char_index),
+      end_col = start_col + vim.str_byteindex(displayed_words, "utf-32", char_range.end_char_index),
+    })
+  end
+
+  return line, orp_byte_start, orp_byte_end, ghost_ranges
 end
 
----@param word string
-local function write_word(word)
+---@param word_index integer
+local function write_word(word_index)
   local line_number = math.floor(vim.o.lines / 2)
-  local line, orp_col_start, orp_col_end = build_orp_line(word)
+  local line, orp_col_start, orp_col_end, surrounding_ranges = build_orp_line(word_index)
 
   with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, line_number, line_number + 1, false, { line })
@@ -313,6 +379,15 @@ local function write_word(word)
     end_col = orp_col_end,
     hl_group = HL_GROUPS.accent,
   })
+
+  for _, range in ipairs(surrounding_ranges) do
+    if range.end_col > range.start_col then
+      vim.api.nvim_buf_set_extmark(state.buf, hl_ns, line_number, range.start_col, {
+        end_col = range.end_col,
+        hl_group = HL_GROUPS.ghost_text,
+      })
+    end
+  end
 end
 
 local function write_status_line()
@@ -447,7 +522,7 @@ M.play = function()
         return
       end
 
-      write_word(state.words[state.current_index])
+      write_word(state.current_index)
       write_status_line()
       write_proggress_bar()
 
@@ -475,7 +550,7 @@ M.set_step = function(relative_step)
   end
   M.pause()
   state.current_index = state.current_index + relative_step
-  write_word(state.words[state.current_index])
+  write_word(state.current_index)
   write_status_line()
 end
 
@@ -554,7 +629,7 @@ local function start_session()
   if M.config.auto_run then
     M.play()
   else
-    write_word(state.words[state.current_index])
+    write_word(state.current_index)
     state.current_index = state.current_index + 1
   end
 end
