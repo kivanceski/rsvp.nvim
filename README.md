@@ -5,8 +5,6 @@
 
 `rsvp.nvim` is a speed-reading plugin for Neovim built around RSVP (Rapid Serial Visual Presentation). It opens a focused fullscreen reader and displays one word at a time from a selected text range so you can read quickly without eye-scanning lines.
 
-https://kivanceski.github.io/rsvp.nvim/assets/rsvp.mp4
-
 ## Features
 
 - Read any selected range (or full buffer) one word at a time
