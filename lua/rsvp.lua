@@ -323,14 +323,21 @@ local function write_keymap_line()
     vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.keymap_line - 1, LINE_INDICES.keymap_line, false, { line })
   end)
 
-  set_hl_group(state.buf, get_abs_linenr(LINE_INDICES.keymap_line), line, M.config.keymaps.decrease_wpm, HL_GROUPS.main)
+  set_hl_group(
+    state.buf,
+    get_abs_linenr(LINE_INDICES.keymap_line),
+    line,
+    string.format(" %s ", M.config.keymaps.decrease_wpm),
+    HL_GROUPS.main
+  )
   set_hl_group(state.buf, get_abs_linenr(LINE_INDICES.keymap_line), line, "<Space>", HL_GROUPS.main)
   set_hl_group(
     state.buf,
     get_abs_linenr(LINE_INDICES.keymap_line),
     line,
-    string.format(" %s", M.config.keymaps.increase_wpm),
-    HL_GROUPS.main
+    string.format(" %s$", M.config.keymaps.increase_wpm),
+    HL_GROUPS.main,
+    { plain = false }
   )
 end
 
