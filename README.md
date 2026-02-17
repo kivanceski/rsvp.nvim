@@ -68,7 +68,7 @@ This example sets every option to its current default value. Keep this as a refe
         link = "Keyword", -- Any `nvim_set_hl()` option is supported
       },
       accent = {
-        link = "@property",
+        link = "ErrorMsg",
       },
       paused = {
         fg = "#FFFF00",

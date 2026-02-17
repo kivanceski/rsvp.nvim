@@ -14,7 +14,7 @@ local HL_GROUPS = {
 
 local default_highlights = {
   main = { link = "Keyword" },
-  accent = { link = "@property" },
+  accent = { link = "ErrorMsg" },
   paused = { fg = "#FFFF00", bold = true },
   ghost_text = { link = "NonText" },
 }
