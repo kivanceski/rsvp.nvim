@@ -54,6 +54,7 @@ local keymaps = {
 local initial_state = {
   current_index = 1,
   running = false,
+  finished = false,
   wpm = 300,
   elapsed_ticks = 0,
 }
@@ -516,7 +517,7 @@ local function write_keymap_line()
 end
 
 M.play = function()
-  if state.running then
+  if state.running or state.finished then
     return
   end
 

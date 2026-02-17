@@ -211,4 +211,29 @@ describe("rsvp step navigation", function()
     assert.are.equal(40, completed)
     assert.are.equal(40, unfinished)
   end)
+
+  it("does not change elapsed DONE time when toggling after finish", function()
+    local rsvp = require("rsvp")
+    open_rsvp_session({ "one two" })
+    rsvp.play()
+
+    local reached_done = vim.wait(2000, function()
+      local buf = vim.api.nvim_get_current_buf()
+      return line_contains(buf, "DONE in")
+    end, 20)
+
+    assert.is_true(reached_done)
+
+    local buf = vim.api.nvim_get_current_buf()
+    local _, done_line_before = find_line_with(buf, "DONE in")
+
+    rsvp.toggle()
+
+    vim.wait(600, function()
+      return false
+    end, 20)
+
+    local _, done_line_after = find_line_with(buf, "DONE in")
+    assert.are.equal(done_line_before, done_line_after)
+  end)
 end)
