@@ -106,6 +106,10 @@ reference and override only the values you want to change.
             fg = "#FFFF00",
             bold = true,
           },
+          done = {
+            fg = "#00FF00",
+            bold = true,
+          },
           ghost_text = {
             link = "NonText",
           },
@@ -169,6 +173,8 @@ HIGHLIGHT GROUPS                             *rsvp-rsvp.nvim-highlight-groups*
                   word.
 
   RsvpPaused      PAUSED marker in the top status line when playback is paused.
+
+  RsvpDone        DONE marker in the duration line shown after playback finishes.
 
   RsvpGhostText   Unfinished part of the progress bar and surrounding words (when
                   surrounding_word_count > 0).

@@ -198,6 +198,8 @@ describe("rsvp step navigation", function()
 
     local buf = vim.api.nvim_get_current_buf()
     assert.is_true(line_contains(buf, "DONE in"))
+    local done_line_idx = find_line_with(buf, "DONE in")
+    assert.same({ "DONE" }, get_line_extmark_texts(buf, done_line_idx, "RsvpDone"))
 
     rsvp.set_step(-1)
 

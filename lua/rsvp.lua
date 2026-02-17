@@ -9,6 +9,7 @@ local HL_GROUPS = {
   main = "RsvpMain",
   accent = "RsvpAccent",
   paused = "RsvpPaused",
+  done = "RsvpDone",
   ghost_text = "RsvpGhostText",
 }
 
@@ -16,6 +17,7 @@ local default_highlights = {
   main = { link = "Keyword" },
   accent = { link = "ErrorMsg" },
   paused = { fg = "#FFFF00", bold = true },
+  done = { fg = "#00FF00", bold = true },
   ghost_text = { link = "NonText" },
 }
 
@@ -65,6 +67,7 @@ local state = vim.deepcopy(initial_state)
 ---@field main? RsvpHighlightOpts
 ---@field accent? RsvpHighlightOpts
 ---@field paused? RsvpHighlightOpts
+---@field done? RsvpHighlightOpts
 ---@field ghost_text? RsvpHighlightOpts
 
 ---@class Config
@@ -423,6 +426,7 @@ local function write_duration_line()
   with_buffer_mutation(state.buf, function()
     vim.api.nvim_buf_set_lines(state.buf, LINE_INDICES.duration_line, LINE_INDICES.duration_line + 1, false, { line })
   end)
+  set_hl_group(state.buf, LINE_INDICES.duration_line, line, "DONE", HL_GROUPS.done)
 end
 
 local function clear_duration_line()

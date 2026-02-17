@@ -76,6 +76,10 @@ This example sets every option to its current default value. Keep this as a refe
         fg = "#FFFF00",
         bold = true,
       },
+      done = {
+        fg = "#00FF00",
+        bold = true,
+      },
       ghost_text = {
         link = "NonText",
       },
@@ -122,6 +126,7 @@ In-window defaults that are always available:
 | `RsvpMain`      | Key hints in the help popup, keymap hints in the status line, `g?` in the help hint line, and the completed part of the progress bar. |
 | `RsvpAccent`    | The ORP (Optimal Recognition Point) character of the active word.                                                                     |
 | `RsvpPaused`    | `PAUSED` marker in the top status line when playback is paused.                                                                       |
+| `RsvpDone`      | `DONE` marker in the duration line shown after playback finishes.                                                                      |
 | `RsvpGhostText` | Unfinished part of the progress bar and surrounding words (when `surrounding_word_count > 0`).                                        |
 
 ## Similar Plugins
